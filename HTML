@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src 'none'; object-src 'none'; frame-src 'none'; child-src 'none'; media-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'; manifest-src 'none'">
+<title>Enterprise Service Intelligence — From Scratch</title>
+<style>
+:root{
+  --blue:#0b3d91;--blue2:#082f6f;--bg:#f4f6f9;--panel:#fff;--line:#dfe5ef;
+  --text:#1f2937;--muted:#667085;--soft:#eef5ff;--green:#15803d;--amber:#b45309;--red:#b42318;
+  --shadow:0 2px 8px rgba(16,24,40,.07)
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Segoe UI,Arial,sans-serif;color:var(--text);background:var(--bg)}
+body{display:flex;flex-direction:column;overflow:hidden}
+header{flex:0 0 auto;background:var(--blue);color:#fff;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 2px 6px rgba(0,0,0,.14)}
+header h1{font-size:20px;margin:0;font-weight:700}header small{opacity:.85}
+.offline-badge{display:inline-flex;align-items:center;gap:6px;margin-left:10px;padding:4px 8px;border:1px solid rgba(255,255,255,.35);border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.04em;background:rgba(255,255,255,.12)}.offline-badge::before{content:'●';font-size:8px}
+.workflow{flex:0 0 auto;display:flex;gap:6px;padding:9px 12px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto}
+.workflow button{flex:0 0 auto;background:#fff;color:#475467;border:1px solid #d7deea;border-radius:7px;padding:9px 11px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
+.workflow button:hover{background:#f8fbff;color:var(--blue);border-color:#abc0df}.workflow button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.shell{flex:1 1 auto;min-height:0;overflow:hidden}.step{display:none;height:100%;overflow:auto;padding:18px}.step.active{display:block}
+.page{max-width:1600px;margin:0 auto}.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}.page-head h2{margin:0;color:var(--blue);font-size:22px}.page-head p{margin:5px 0 0;color:var(--muted);line-height:1.5;max-width:980px}.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#667085;margin-bottom:4px}
+.panel{background:#fff;border:1px solid #e4e7ec;border-radius:10px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}.panel h3{margin:0 0 8px;color:#23395d;font-size:15px}.panel p{color:var(--muted);font-size:12px;line-height:1.5}
+.grid{display:grid;gap:12px}.grid.cards{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{background:#fff;border:1px solid #e4e7ec;border-radius:9px;padding:13px;min-width:0}.card b{display:block;color:#667085;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.card .big{font-size:24px;font-weight:800;color:#23395d}.card .sub{font-size:10px;color:#667085;margin-top:4px;overflow-wrap:anywhere}
+.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.actions.right{justify-content:flex-end}
+button,.btn{font:inherit}.btn{background:#fff;color:#344054;border:1px solid #cfd6e4;border-radius:6px;padding:8px 11px;font-weight:650;cursor:pointer}.btn:hover{background:#f8fbff;color:var(--blue);border-color:#9fb7df}.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.btn.primary:hover{background:var(--blue2)}.btn.danger{color:var(--red);border-color:#f1b7b7}.btn.small{padding:5px 8px;font-size:11px}.btn:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{font:inherit;width:100%;border:1px solid #cfd6e4;border-radius:6px;padding:8px 9px;background:#fff;color:#344054}textarea{min-height:78px;resize:vertical}label{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#667085;margin-bottom:5px}.field{min-width:0}.field small{display:block;color:#667085;margin-top:4px;font-size:10px;line-height:1.4}
+.table-wrap{overflow:auto;border:1px solid #e4e7ec;border-radius:8px;max-height:62vh}.table{width:100%;border-collapse:collapse;font-size:11px;background:#fff}.table th,.table td{padding:8px;border-bottom:1px solid #edf0f4;text-align:left;vertical-align:top}.table th{position:sticky;top:0;background:#f8fafc;color:#475467;font-size:10px;text-transform:uppercase;letter-spacing:.03em;z-index:2}.table tr:last-child td{border-bottom:0}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px}.nowrap{white-space:nowrap}.muted{color:var(--muted)}
+.badge{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800;background:#eef3fb;color:#344054}.badge.good{background:#ecfdf3;color:var(--green)}.badge.warn{background:#fff7ed;color:var(--amber)}.badge.bad{background:#fef2f2;color:var(--red)}.badge.blue{background:#eef5ff;color:var(--blue)}
+.empty{padding:28px;border:1px dashed #cfd6e4;border-radius:8px;text-align:center;color:#667085;background:#fafbfc}.empty b{display:block;color:#344054;margin-bottom:5px}
+.notice{padding:10px 12px;border-left:4px solid var(--blue);background:#f0f6ff;border-radius:6px;font-size:11px;line-height:1.5;color:#344054}.notice.warn{border-color:#f59e0b;background:#fff7ed;color:#7c2d12}.notice.good{border-color:#22c55e;background:#ecfdf3;color:#166534}
+.source-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.source-chip{background:#fff;border:1px solid #cfd6e4;border-radius:7px;padding:7px 9px;cursor:pointer;font-size:11px}.source-chip.active{background:#eef5ff;color:var(--blue);border-color:#9fb7df;font-weight:700}
+.profile-card{border-top:4px solid var(--blue)}
+.stage-status{min-width:92px}
+.relationship-candidates{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}.candidate{border:1px solid #e4e7ec;border-radius:8px;padding:10px;background:#fff}.candidate strong{font-size:12px;color:#23395d}.candidate .meta{font-size:10px;color:#667085;margin-top:4px}
+.concept-card,.metric-card{border:1px solid #e4e7ec;border-radius:8px;padding:11px;background:#fff;margin-bottom:8px}.concept-card h4,.metric-card h4{margin:0;color:#23395d;font-size:13px}.concept-card p,.metric-card p{margin:5px 0;font-size:11px}.field-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}.tag{display:inline-flex;background:#eef5ff;color:#0b3d91;border:1px solid #c7d8f2;border-radius:999px;padding:3px 6px;font-size:9px;font-weight:700}
+.logic-layout{display:grid;grid-template-columns:minmax(300px,.8fr) minmax(620px,1.8fr);gap:14px}.logic-left{min-width:0}.logic-right{min-width:0}.function-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}.function-group{border:1px solid #e4e7ec;border-radius:8px;padding:8px;background:#f8fafc}.function-group h4{margin:0 0 6px;font-size:10px;text-transform:uppercase;color:#667085;letter-spacing:.04em}.function-group div{font-size:10px;line-height:1.5;color:#344054}
+.filter-row{display:grid;grid-template-columns:92px 1.2fr 1fr 1fr 1fr auto;gap:7px;align-items:end;border:1px solid #e4e7ec;border-radius:8px;padding:8px;background:#fafbfc;margin-top:7px}.filter-row .remove{width:auto}
+.formula-preview{background:#0f172a;color:#e2e8f0;border-radius:7px;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap}
+.validation-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.validation-card{border:1px solid #e4e7ec;border-radius:8px;padding:11px;background:#fff}.validation-card h4{margin:0 0 5px;color:#23395d}.validation-result{font-size:26px;font-weight:800;color:var(--blue);margin:7px 0}.validation-meta{font-size:10px;color:#667085;line-height:1.5}
+.builder{display:grid;grid-template-columns:280px minmax(0,1fr);gap:14px}.palette{border:1px solid #e4e7ec;border-radius:8px;background:#f8fafc;padding:9px;max-height:68vh;overflow:auto}.palette-item{background:#fff;border:1px solid #dfe5ef;border-radius:7px;padding:8px;margin-bottom:6px;cursor:grab}.palette-item b{font-size:11px;color:#23395d}.palette-item small{display:block;color:#667085;margin-top:2px;font-size:9px}.canvas{min-height:60vh;border:2px dashed #cfd6e4;border-radius:10px;padding:12px;background:#fff}.canvas.drag-over{border-color:var(--blue);background:#f8fbff}.dash-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.dash-card{border:1px solid #e4e7ec;border-radius:9px;padding:12px;background:#fff}.dash-card h4{margin:0;color:#23395d;font-size:12px}.dash-value{font-size:26px;font-weight:800;color:var(--blue);margin:8px 0}.dash-series{margin-top:8px}.bar-row{display:grid;grid-template-columns:minmax(90px,.9fr) 2fr auto;gap:7px;align-items:center;margin:5px 0;font-size:9px}.bar-track{height:8px;background:#edf2f7;border-radius:99px;overflow:hidden}.bar-fill{height:100%;background:#0b3d91;border-radius:99px}.component-actions{display:flex;gap:6px;align-items:center;margin-top:8px}.component-actions select{width:auto;min-width:100px;padding:5px}
+
+/* Step 7 dashboard-only additions: promoted-field filters + flexible visualization canvas. */
+.promoted-filter-palette{display:flex;gap:7px;flex-wrap:wrap;align-items:stretch}.filter-field-chip{min-width:170px;max-width:260px;background:#fff;border:1px solid #cfd6e4;border-radius:7px;padding:8px 9px;cursor:grab}.filter-field-chip:hover{border-color:#9fb7df;background:#f8fbff}.filter-field-chip b{display:block;font-size:11px;color:#23395d;overflow-wrap:anywhere}.filter-field-chip small{display:block;font-size:9px;color:#667085;margin-top:3px;line-height:1.35}.filter-drop-zone{margin-top:10px;min-height:74px;border:2px dashed #cfd6e4;border-radius:9px;padding:10px;background:#fafbfc}.filter-drop-zone.drag-over{border-color:var(--blue);background:#f0f6ff}.dashboard-filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.dashboard-filter{min-width:190px;max-width:310px;flex:1 1 210px;border:1px solid #dfe5ef;border-radius:8px;background:#fff;padding:8px}.dashboard-filter .filter-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;font-weight:800;color:#23395d;margin-bottom:6px}.dashboard-filter .filter-title button{width:auto}.dashboard-filter-controls{display:grid;grid-template-columns:minmax(95px,.8fr) minmax(110px,1.2fr);gap:6px}.dashboard-filter-controls .range-second{grid-column:2}.dashboard-filter-note{font-size:9px;color:#667085;margin-top:5px}.dashboard-builder-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between;margin-bottom:10px}.dashboard-builder-toolbar .right{display:flex;gap:7px;flex-wrap:wrap}.dash-grid{grid-template-columns:repeat(12,minmax(0,1fr));align-items:start}.dash-card{grid-column:span 4;min-width:0;cursor:grab}.dash-card.dragging{opacity:.45}.dash-card.drop-before{outline:2px dashed var(--blue);outline-offset:3px}.dash-card img.python-chart{display:block;width:100%;height:auto;max-height:360px;object-fit:contain;border-radius:6px;margin-top:8px}.chart-status{padding:18px;border:1px dashed #cfd6e4;border-radius:7px;color:#667085;text-align:center;font-size:10px;margin-top:8px}.native-chart{width:100%;height:220px;margin-top:8px;display:block}.pie-fallback{width:min(210px,75%);aspect-ratio:1;border-radius:50%;margin:14px auto;border:1px solid #e4e7ec}.chart-legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:5px;margin-top:8px;font-size:9px;color:#475467}.chart-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#64748b;margin-right:5px}.python-note{font-size:9px;color:#667085;margin-top:5px}.dashboard-preview-overlay{position:fixed;inset:0;background:#f4f6f9;z-index:100000;display:none;overflow:auto}.dashboard-preview-overlay.active{display:block}.dashboard-preview-shell{max-width:1600px;margin:0 auto;padding:18px}.dashboard-preview-head{position:sticky;top:0;z-index:10;background:#fff;border:1px solid #e4e7ec;border-radius:10px;box-shadow:var(--shadow);padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}.dashboard-preview-body{background:#fff;border:1px solid #e4e7ec;border-radius:10px;box-shadow:var(--shadow);padding:14px}.dashboard-preview-filters{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #e4e7ec}.dashboard-preview-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px}.builder-help{font-size:10px;color:#667085;line-height:1.45}.palette-section-title{font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:800;color:#667085;margin:11px 0 6px}.metric-palette-scroll{max-height:62vh;overflow:auto}
+@media(max-width:1100px){.logic-layout,.builder{grid-template-columns:1fr}.grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}.function-groups{grid-template-columns:1fr}.filter-row{grid-template-columns:1fr 1fr}.dash-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.grid.two,.grid.three,.grid.four{grid-template-columns:1fr}.dash-grid,.dashboard-preview-grid{grid-template-columns:1fr}.dash-card{grid-column:1/-1!important}.page-head{flex-direction:column}.filter-row{grid-template-columns:1fr}.dashboard-filter-controls{grid-template-columns:1fr}.dashboard-filter-controls .range-second{grid-column:auto}.step{padding:12px}}
+
+/* Step 7 only: dashboard intelligence, layout structures and threshold presentation. */
+.layout-structure-palette{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}.layout-structure-item{border:1px dashed #9fb7df;background:#f8fbff;border-radius:8px;padding:9px;cursor:grab;text-align:center;color:#23395d;font-size:10px;font-weight:800}.layout-structure-item:hover{background:#eef5ff;border-color:var(--blue)}
+.dashboard-layout{display:flex;flex-direction:column;gap:12px}.dash-section{position:relative;border:1px solid #dbe3ef;border-radius:12px;background:#f8fafc;padding:12px;min-height:110px;transition:.15s}.dash-section:hover{border-color:#b7c7df}.dash-section.drag-over{outline:2px dashed var(--blue);outline-offset:2px;background:#f0f6ff}.dash-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.dash-section-title{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:800;color:#475467;text-transform:uppercase;letter-spacing:.04em}.dash-section-grid.horizontal{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px;align-items:start}.dash-section-grid.vertical{display:flex;flex-direction:column;gap:10px}.dash-section-grid.vertical .dash-card{width:100%!important;grid-column:auto!important}.dash-section-empty{min-height:76px;border:1px dashed #cfd6e4;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;color:#98a2b3;font-size:10px;padding:12px;background:#fff}
+.dash-card{position:relative;border:1px solid #e4e7ec;border-top:4px solid #94a3b8;border-radius:12px;padding:13px;background:#fff;box-shadow:0 2px 8px rgba(16,24,40,.07);transition:transform .14s,box-shadow .14s,border-color .14s;outline:none}.dash-card:hover,.dash-card:focus-within,.dash-card.intel-open{transform:translateY(-1px);box-shadow:0 12px 28px rgba(16,24,40,.14)}.dash-card.status-good{border-top-color:#16a34a}.dash-card.status-watch{border-top-color:#f59e0b}.dash-card.status-critical{border-top-color:#dc2626}.dash-card.status-neutral{border-top-color:#64748b}.dash-card.status-good .dash-value{color:#15803d}.dash-card.status-watch .dash-value{color:#b45309}.dash-card.status-critical .dash-value{color:#b42318}.dash-card-status{display:flex;align-items:center;gap:6px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.status-dot{width:8px;height:8px;border-radius:50%;background:#64748b}.status-good .status-dot{background:#16a34a}.status-watch .status-dot{background:#f59e0b}.status-critical .status-dot{background:#dc2626}
+.intel-summary{display:none;position:absolute;z-index:40;top:calc(100% + 8px);left:0;width:min(520px,calc(100vw - 90px));max-height:430px;overflow:auto;background:#fff;border:1px solid #d9e1ec;border-radius:12px;box-shadow:0 20px 46px rgba(16,24,40,.20);padding:13px}.dash-card:hover>.intel-summary,.dash-card:focus-within>.intel-summary,.dash-card.intel-open>.intel-summary{display:block}.intel-summary h5{margin:0 0 7px;color:var(--blue);font-size:13px}.intel-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.intel-item{background:#f8fafc;border:1px solid #e4e7ec;border-radius:7px;padding:8px;min-width:0}.intel-item b{display:block;font-size:8px;text-transform:uppercase;letter-spacing:.04em;color:#667085;margin-bottom:3px}.intel-item div{font-size:10px;line-height:1.4;color:#344054;overflow-wrap:anywhere}.intel-wide{grid-column:1/-1}.intel-btn{width:auto!important;padding:4px 7px!important;border-radius:999px!important;font-size:10px!important}.threshold-editor{display:none;margin-top:8px;padding:9px;border:1px solid #e4e7ec;border-radius:8px;background:#f8fafc}.threshold-editor.active{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.threshold-editor .field label{font-size:8px}.threshold-editor input,.threshold-editor select{padding:6px 7px;font-size:10px}.threshold-legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.threshold-legend span{font-size:8px;font-weight:800;border-radius:999px;padding:3px 6px}.threshold-legend .g{background:#ecfdf3;color:#15803d}.threshold-legend .w{background:#fff7ed;color:#b45309}.threshold-legend .c{background:#fef2f2;color:#b42318}
+.preview-intel-note{font-size:9px;color:#667085;margin-top:6px}.dashboard-preview-grid{display:block}.dashboard-preview-grid .dashboard-layout{gap:14px}.dashboard-preview-grid .dash-section{background:#fff;border-color:#e4e7ec}.dashboard-preview-grid .dash-card{cursor:default}.dashboard-preview-grid .dash-card:hover{transform:none}
+/* Robustness-only: direct box resizing in the builder. */
+#step7 .dash-card{min-height:140px}
+#step7 .component-resize-handle{position:absolute;right:3px;bottom:3px;width:18px;height:18px;border-right:3px solid #94a3b8;border-bottom:3px solid #94a3b8;border-radius:0 0 7px 0;cursor:nwse-resize;opacity:.55;z-index:35;touch-action:none}
+#step7 .component-resize-handle:hover{opacity:1;border-color:var(--blue)}
+#step7 .dash-card.resizing{user-select:none;box-shadow:0 14px 34px rgba(16,24,40,.18);outline:2px solid #93c5fd;outline-offset:2px}
+.dashboard-preview-overlay .component-resize-handle{display:none!important}
+@media(max-width:900px){.layout-structure-palette{grid-template-columns:1fr}.intel-summary{position:fixed;left:18px;right:18px;top:120px;width:auto;max-height:70vh}.threshold-editor.active{grid-template-columns:1fr}.intel-summary-grid{grid-template-columns:1fr}.intel-wide{grid-column:auto}}
+
+
+
+/* =====================================================================
+   GOLDEN BASELINE VISUAL INTEGRATION — STEP 7 + WORKING DASHBOARD ONLY
+   Functional workflow, state, calculations, Steps 0–6 and data logic are
+   intentionally untouched. These rules map the Golden Baseline visual
+   language onto the from-scratch dashboard builder and preview.
+   ===================================================================== */
+#step7{background:var(--bg)}
+#step7 .page{max-width:none;padding:0 2px}
+#step7 .page-head{margin-bottom:16px;padding:2px 2px 0}
+#step7 .page-head h2{color:var(--blue);font-size:22px;font-weight:700}
+#step7 .page-head p{color:#475467;max-width:1100px}
+#step7 .panel{
+  background:#fff;border:0;border-radius:12px;padding:20px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:18px
+}
+#step7 .panel h3{color:var(--blue);font-size:15px}
+#step7 .builder{
+  grid-template-columns:minmax(300px,.78fr) minmax(600px,2.22fr);
+  gap:18px;align-items:start
+}
+#step7 .palette{
+  border:1px solid #dfe5ef;border-radius:12px;background:#fff;padding:15px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);max-height:72vh;scrollbar-gutter:stable
+}
+#step7 .canvas{
+  min-height:68vh;border:1px solid #dfe5ef;border-radius:12px;padding:15px;
+  background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.08)
+}
+#step7 .canvas.drag-over{outline:2px dashed var(--blue);outline-offset:2px;background:#f8fbff}
+#step7 .dashboard-builder-toolbar{margin-bottom:12px}
+#step7 .builder-help{font-size:11px;line-height:1.5;color:#667085}
+#step7 .palette-section-title{
+  margin:14px 0 7px;font-size:11px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.06em;color:#667085
+}
+
+/* Promoted fields become Golden-Baseline-style filter cards. */
+#step7 .promoted-filter-palette{gap:10px}
+#step7 .filter-field-chip{
+  min-width:180px;max-width:280px;background:#fff;border:1px solid #dfe5ef;
+  border-radius:10px;padding:10px 11px;box-shadow:0 1px 3px rgba(16,24,40,.05);
+  transition:.15s
+}
+#step7 .filter-field-chip:hover{
+  background:var(--soft);border-color:#bfd0ea;box-shadow:0 4px 12px rgba(16,24,40,.08)
+}
+#step7 .filter-field-chip b{font-size:12px;color:#23395d}
+#step7 .filter-field-chip small{font-size:10px;line-height:1.4}
+#step7 .filter-drop-zone{
+  margin-top:12px;min-height:86px;border:2px dashed #c6d2e7;border-radius:10px;
+  padding:12px;background:#f8fafc
+}
+#step7 .filter-drop-zone.drag-over{border-color:var(--blue);background:#eef5ff}
+#step7 .dashboard-filter{
+  min-width:210px;max-width:330px;border:1px solid #dfe5ef;border-radius:10px;
+  padding:10px;background:#fff;box-shadow:0 1px 3px rgba(16,24,40,.05)
+}
+#step7 .dashboard-filter .filter-title{font-size:11px;color:#23395d}
+
+/* Golden Baseline button rhythm, limited to Step 7 and the dashboard view. */
+#step7 .btn,.dashboard-preview-overlay .btn{
+  border-radius:6px;padding:9px 13px;transition:.2s;font-weight:650
+}
+#step7 .btn.primary,.dashboard-preview-overlay .btn.primary{
+  background:var(--blue);color:#fff;border-color:var(--blue)
+}
+#step7 .btn.primary:hover,.dashboard-preview-overlay .btn.primary:hover{
+  background:var(--blue2);color:#fff
+}
+
+/* Layout structures: elegant, obvious horizontal/vertical containers. */
+#step7 .layout-structure-palette{gap:9px}
+#step7 .layout-structure-item{
+  border:1px dashed #9fb7df;background:#f8fbff;border-radius:10px;padding:11px 9px;
+  color:#23395d;font-size:11px;font-weight:800;box-shadow:inset 0 0 0 1px rgba(11,61,145,.02)
+}
+#step7 .layout-structure-item:hover{background:#eef5ff;border-color:var(--blue)}
+#step7 .dashboard-layout{gap:15px}
+#step7 .dash-section,
+.dashboard-preview-overlay .dash-section{
+  border:1px solid #dfe5ef;border-radius:12px;background:#f8fafc;padding:13px;
+  min-height:118px;box-shadow:inset 0 1px 0 rgba(255,255,255,.75);transition:.15s
+}
+#step7 .dash-section:hover{border-color:#b9c8dc}
+#step7 .dash-section.drag-over{outline:2px dashed var(--blue);outline-offset:2px;background:#eef5ff}
+#step7 .dash-section-title,.dashboard-preview-overlay .dash-section-title{
+  font-size:11px;font-weight:800;color:#475467;letter-spacing:.06em
+}
+#step7 .dash-section-empty{
+  min-height:84px;border:1px dashed #c6d2e7;border-radius:8px;background:#fff;color:#98a2b3
+}
+
+/* Golden Baseline KPI/card system. */
+#step7 .dash-card,
+.dashboard-preview-overlay .dash-card{
+  position:relative;background:#fff;border:0;border-top:4px solid #64748b;
+  border-radius:12px;padding:15px;box-shadow:0 2px 6px rgba(0,0,0,.10);
+  transition:box-shadow .15s,transform .15s,outline-color .15s;outline:1px solid transparent;
+  overflow:visible
+}
+#step7 .dash-card:hover,#step7 .dash-card:focus-within,#step7 .dash-card.intel-open,
+.dashboard-preview-overlay .dash-card:hover,.dashboard-preview-overlay .dash-card:focus-within,.dashboard-preview-overlay .dash-card.intel-open{
+  transform:none;box-shadow:0 10px 28px rgba(0,0,0,.14);outline-color:#d9e3f0
+}
+#step7 .dash-card h4,.dashboard-preview-overlay .dash-card h4{font-size:13px;color:#666;font-weight:700}
+#step7 .dash-value,.dashboard-preview-overlay .dash-value{
+  margin-top:5px;font-size:27px;font-weight:700;color:#23395d
+}
+#step7 .dash-card.status-good,.dashboard-preview-overlay .dash-card.status-good{border-top-color:#16a34a}
+#step7 .dash-card.status-watch,.dashboard-preview-overlay .dash-card.status-watch{border-top-color:#f59e0b}
+#step7 .dash-card.status-critical,.dashboard-preview-overlay .dash-card.status-critical{border-top-color:#dc2626}
+#step7 .dash-card.status-neutral,.dashboard-preview-overlay .dash-card.status-neutral{border-top-color:#64748b}
+#step7 .dash-card.status-good .dash-value,.dashboard-preview-overlay .dash-card.status-good .dash-value{color:#15803d}
+#step7 .dash-card.status-watch .dash-value,.dashboard-preview-overlay .dash-card.status-watch .dash-value{color:#b45309}
+#step7 .dash-card.status-critical .dash-value,.dashboard-preview-overlay .dash-card.status-critical .dash-value{color:#b42318}
+#step7 .dash-card-status,.dashboard-preview-overlay .dash-card-status{
+  margin-top:1px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em
+}
+
+/* Intelligence Summary = Golden Baseline hover/focus evidence card. */
+#step7 .intel-summary,
+.dashboard-preview-overlay .intel-summary{
+  display:none;position:fixed;top:145px;right:25px;left:auto;z-index:99999;
+  width:600px;max-width:calc(100vw - 50px);max-height:82vh;overflow-y:auto;
+  overscroll-behavior:contain;scrollbar-gutter:stable;background:#fff;
+  border:1px solid #d9d9d9;border-radius:10px;box-shadow:0 15px 35px rgba(0,0,0,.18);
+  padding:15px
+}
+#step7 .dash-card:hover>.intel-summary,#step7 .dash-card:focus-within>.intel-summary,#step7 .dash-card.intel-open>.intel-summary,
+.dashboard-preview-overlay .dash-card:hover>.intel-summary,.dashboard-preview-overlay .dash-card:focus-within>.intel-summary,.dashboard-preview-overlay .dash-card.intel-open>.intel-summary{display:block}
+#step7 .intel-summary h5,.dashboard-preview-overlay .intel-summary h5{
+  margin:0 0 8px;color:var(--blue);font-size:16px
+}
+#step7 .intel-summary-grid,.dashboard-preview-overlay .intel-summary-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px
+}
+#step7 .intel-item,.dashboard-preview-overlay .intel-item{
+  background:#fff;border:0;border-bottom:1px solid #eee;border-radius:0;padding:7px 2px
+}
+#step7 .intel-item b,.dashboard-preview-overlay .intel-item b{
+  font-size:9px;color:#667085;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px
+}
+#step7 .intel-item div,.dashboard-preview-overlay .intel-item div{font-size:11px;line-height:1.45;color:#344054}
+#step7 .intel-wide,.dashboard-preview-overlay .intel-wide{grid-column:1/-1}
+#step7 .intel-summary::after,.dashboard-preview-overlay .intel-summary::after{
+  content:"Hover/focus intelligence";display:block;margin-top:10px;padding:10px;
+  background:#f0f6ff;border-left:4px solid var(--blue);border-radius:6px;
+  color:#475467;font-size:10px;line-height:1.4
+}
+
+/* Threshold controls inherit the baseline Good / Watch / Critical visual language. */
+#step7 .threshold-editor,.dashboard-preview-overlay .threshold-editor{
+  margin-top:10px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:8px;padding:10px
+}
+#step7 .status-good .status-dot,.dashboard-preview-overlay .status-good .status-dot{background:#16a34a}
+#step7 .status-watch .status-dot,.dashboard-preview-overlay .status-watch .status-dot{background:#f59e0b}
+#step7 .status-critical .status-dot,.dashboard-preview-overlay .status-critical .status-dot{background:#dc2626}
+
+/* Golden Baseline full-dashboard presentation. */
+.dashboard-preview-overlay{background:var(--bg)}
+.dashboard-preview-shell{max-width:none;margin:0;padding:0 20px 20px}
+.dashboard-preview-head{
+  position:sticky;top:0;z-index:100;background:var(--blue);color:#fff;border:0;border-radius:0;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);padding:15px 25px;margin:0 -20px 18px
+}
+.dashboard-preview-head .eyebrow{color:rgba(255,255,255,.75)}
+.dashboard-preview-head h2{color:#fff!important;font-size:24px!important;font-weight:600!important}
+.dashboard-preview-head .btn{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.28)}
+.dashboard-preview-head .btn:hover{background:rgba(255,255,255,.20);color:#fff;border-color:rgba(255,255,255,.40)}
+.dashboard-preview-head .btn.primary{background:#fff;color:var(--blue);border-color:#fff}
+.dashboard-preview-head .btn.primary:hover{background:#eef5ff;color:var(--blue)}
+.dashboard-preview-body{
+  background:transparent;border:0;border-radius:0;box-shadow:none;padding:0;max-width:1700px;margin:0 auto
+}
+.dashboard-preview-filters{
+  background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:15px;margin-bottom:18px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08)
+}
+.dashboard-preview-grid{display:block}
+.dashboard-preview-grid .dashboard-layout{gap:18px}
+.dashboard-preview-grid .dash-section{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.dashboard-preview-grid .dash-card{cursor:default}
+
+/* Golden baseline scrollbar and containment behavior. */
+#step7 ::-webkit-scrollbar,.dashboard-preview-overlay ::-webkit-scrollbar{width:10px;height:10px}
+#step7 ::-webkit-scrollbar-thumb,.dashboard-preview-overlay ::-webkit-scrollbar-thumb{background:#c6d2e7;border-radius:20px}
+#step7 ::-webkit-scrollbar-track,.dashboard-preview-overlay ::-webkit-scrollbar-track{background:#f8f8f8}
+#step7 .builder,#step7 .palette,#step7 .canvas,#step7 .dash-section,#step7 .dash-card,
+.dashboard-preview-overlay .dash-section,.dashboard-preview-overlay .dash-card{min-width:0}
+
+@media(max-width:1100px){
+  #step7 .builder{grid-template-columns:1fr}
+  #step7 .palette{max-height:none}
+}
+@media(max-width:950px){
+  #step7 .intel-summary,.dashboard-preview-overlay .intel-summary{display:none!important}
+}
+@media(max-width:700px){
+  #step7 .panel{padding:15px}
+  .dashboard-preview-shell{padding:0 12px 12px}
+  .dashboard-preview-head{margin:0 -12px 14px;padding:13px 15px}
+}
+
+
+/* Golden Baseline review: Step 7 visualization shelves + data intelligence only. */
+#step7 .visual-shelves{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:9px 0 3px}
+#step7 .visual-role-zone{min-height:56px;border:1.5px dashed #b8c4d6;border-radius:8px;background:#f8fafc;padding:7px 8px;display:flex;flex-direction:column;justify-content:center;gap:3px;transition:.15s;position:relative}
+#step7 .visual-role-zone:hover{border-color:#93aacf;background:#f4f8ff}
+#step7 .visual-role-zone.drag-over{border-color:var(--blue);background:#eef5ff;outline:2px solid rgba(11,61,145,.10)}
+#step7 .visual-role-zone b{font-size:9px;text-transform:uppercase;letter-spacing:.055em;color:#667085}
+#step7 .visual-role-zone .role-value{font-size:11px;font-weight:700;color:#23395d;overflow-wrap:anywhere}
+#step7 .visual-role-zone .role-hint{font-size:9px;color:#98a2b3;line-height:1.25}
+#step7 .visual-role-zone .role-clear{position:absolute;top:4px;right:4px;width:20px;height:20px;border:0;background:transparent;color:#98a2b3;padding:0;border-radius:4px;font-size:13px}
+#step7 .visual-role-zone .role-clear:hover{background:#eef2f6;color:#b42318}
+#step7 .visual-map-note{font-size:9px;color:#667085;line-height:1.35;margin:3px 0 7px}
+#step7 .intel-summary .intel-evidence,.dashboard-preview-overlay .intel-summary .intel-evidence{background:#f8fafc;border:1px solid #e4e7ec;border-radius:7px;padding:8px 9px;font-size:11px;line-height:1.45;color:#344054}
+#step7 .intel-summary .intel-observations,.dashboard-preview-overlay .intel-summary .intel-observations{margin:7px 0 0 16px;font-size:11px;line-height:1.45;color:#344054}
+#step7 .intel-summary .intel-observations li,.dashboard-preview-overlay .intel-summary .intel-observations li{margin:4px 0}
+#step7 .intel-summary .intel-data-note,.dashboard-preview-overlay .intel-summary .intel-data-note{font-size:10px;line-height:1.4;color:#667085;margin-top:7px}
+@media(max-width:900px){#step7 .visual-shelves{grid-template-columns:1fr 1fr}}
+
+</style>
+</head>
+<body>
+<script id="esiOfflineNetworkGuard">
+(()=>{
+  const blocked=()=>Promise.reject(new Error('Outbound network access is disabled in this offline build.'));
+  try{window.fetch=blocked}catch(e){}
+  try{window.XMLHttpRequest=function(){throw new Error('Outbound network access is disabled in this offline build.')}}catch(e){}
+  try{window.WebSocket=function(){throw new Error('Outbound network access is disabled in this offline build.')}}catch(e){}
+  try{window.EventSource=function(){throw new Error('Outbound network access is disabled in this offline build.')}}catch(e){}
+  try{if(navigator&&navigator.sendBeacon)navigator.sendBeacon=()=>false}catch(e){}
+  window.__ESI_OFFLINE_DEVICE_ONLY__=true;
+})();
+</script>
+<header>
+  <div><h1>Enterprise Service Intelligence — From Scratch <span class="offline-badge" title="Outbound network access is blocked by this build">OFFLINE · DEVICE ONLY</span></h1><small>No prebuilt concepts · No prebuilt metrics · No Enterprise Dashboard assumptions</small></div>
+  <div class="actions"><button class="btn" onclick="resetEverything()">Reset Lab</button></div>
+</header>
+<nav class="workflow" id="workflow" aria-label="Build workflow">
+  <button data-step="0" class="active" onclick="showStep(0)">STEP 0 · Upload</button>
+  <button data-step="1" onclick="showStep(1)">STEP 1 · Source Profile</button>
+  <button data-step="2" onclick="showStep(2)">STEP 2 · Field Staging</button>
+  <button data-step="3" onclick="showStep(3)">STEP 3 · Relationships / Keys</button>
+  <button data-step="4" onclick="showStep(4)">STEP 4 · Business Concepts</button>
+  <button data-step="5" onclick="showStep(5)">STEP 5 · Business Logic / Metrics</button>
+  <button data-step="6" onclick="showStep(6)">STEP 6 · Validate</button>
+  <button data-step="7" onclick="showStep(7)">STEP 7 · Dashboard Builder</button>
+</nav>
+<div class="shell">
+<section class="step active" id="step0"><div class="page">
+  <div class="page-head"><div><div class="eyebrow">Step 0</div><h2>Upload One Source CSV</h2><p>Upload one CSV at a time. The application registers the raw source and extracts structure only. It does not assign business meaning, metrics, formulas, or dashboards.</p></div></div>
+  <section class="panel">
+    <div class="grid two">
+      <div><h3>Source Upload</h3><p>For your first pass, upload <b>task_sla.csv</b>. Later you can return here and add the next CSV without losing the model already built.</p><div class="actions"><button class="btn primary" onclick="document.getElementById('sourceFile').click()">Choose CSV</button><input id="sourceFile" type="file" accept=".csv,text/csv" hidden onchange="uploadOneSource(this.files[0]);this.value=''" /></div><div id="uploadStatus" class="notice" style="margin-top:10px">No source uploaded yet.</div></div>
+      <div><h3>Rules for This Build</h3><div class="notice warn"><b>Nothing is prebuilt.</b><br>0 business concepts · 0 metrics · 0 dashboards on a clean start. Only structural profiling is automatic.</div></div>
+    </div>
+  </section>
+  <section class="panel"><h3>Source Inventory</h3><div id="sourceInventory"></div></section>
+</div></section>
+
+<section class="step" id="step1"><div class="page">
+  <div class="page-head"><div><div class="eyebrow">Step 1</div><h2>Raw Source Registration + Profiling</h2><p>Understand the physical file before interpreting it. Row counts, headers, nulls, distinct values, types, ranges, duplicates, and sample values are structural facts—not business meaning.</p></div><div class="actions"><button class="btn primary" onclick="showStep(2)">Continue to Field Staging</button></div></div>
+  <div id="profileSourcePicker" class="source-list"></div>
+  <div id="profileContent"></div>
+</div></section>
+
+<section class="step" id="step2"><div class="page">
+  <div class="page-head"><div><div class="eyebrow">Step 2</div><h2>Understand Each Header — Field Staging</h2><p>Review every header and decide whether it is promoted, held, or ignored. You can record what the field means and assign a structural role. No business concept is created automatically.</p></div><div class="actions"><button class="btn primary" onclick="showStep(3)">Continue to Relationships / Keys</button></div></div>
+  <div id="fieldSourcePicker" class="source-list"></div>
+  <section class="panel"><div id="fieldStageContent"></div></section>
+</div></section>
+
+<section class="step" id="step3"><div class="page">
+  <div class="page-head"><div><div class="eyebrow">Step 3</div><h2>Identify Relationships / Keys</h2><p>Mark primary keys and relationship keys explicitly. When a second source is uploaded, build source-to-source relationships here. Candidate uniqueness and name/value overlap are evidence only; the user confirms the relationship.</p></div><div class="actions"><button class="btn primary" onclick="showStep(4)">Continue to Business Concepts</button></div></div>
+  <section class="panel"><h3>Key Candidates</h3><div id="keyCandidates"></div></section>
+  <section class="panel"><h3>Confirmed Relationships</h3><div class="grid four" style="align-items:end"><div class="field"><label>Left Field</label><select id="relLeft"></select></div><div class="field"><label>Relationship</label><select id="relType"><option value="equals">Equals / Join</option><option value="parent-child">Parent → Child</option><option value="reference">Reference</option></select></div><div class="field"><label>Right Field</label><select id="relRight"></select></div><div><button class="btn primary" onclick="addRelationship()">Add Relationship</button></div></div><div id="relationshipList" style="margin-top:12px"></div></section>
+</div></section>
+
+<section class="step" id="step4"><div class="page">
+  <div class="page-head"><div><div class="eyebrow">Step 4</div><h2>Define Business Concepts</h2><p>This library starts empty. Create only the concepts your business actually needs, based on fields you reviewed and relationships you confirmed.</p></div><div class="actions"><button class="btn primary" onclick="showStep(5)">Continue to Business Logic / Metrics</button></div></div>
+  <div class="grid two">
+    <section class="panel"><h3>Create Concept</h3><div class="field"><label>Business Concept Name</label><input id="conceptName" placeholder="e.g. SLA Breach" /></div><div class="field" style="margin-top:8px"><label>Business Definition</label><textarea id="conceptDefinition" placeholder="Define the concept in your own business terms."></textarea></div><div class="field" style="margin-top:8px"><label>Related Promoted Fields</label><select id="conceptFields" multiple size="8"></select><small>Select one or more fields. Ctrl/Cmd-click for multiple selection.</small></div><div class="actions" style="margin-top:10px"><button class="btn primary" onclick="saveConcept()">Create Concept</button></div></section>
+    <section class="panel"><h3>Business Concept Library</h3><div id="conceptList"></div></section>
+  </div>
+</div></section>
+
+<section class="step" id="step5"><div class="page">
+  <div class="page-head"><div><div class="eyebrow">Step 5</div><h2>Create Business Logic / Metrics</h2><p>Build calculations from scratch. Filters are first-class: equality, inequality, IN/NOT IN, contains, starts/ends with, numeric comparisons, BETWEEN, null tests, boolean tests, and date comparisons can all be combined with AND/OR before aggregation.</p></div><div class="actions"><button class="btn primary" onclick="showStep(6)">Continue to Validation</button></div></div>
+  <div class="logic-layout">
+    <section class="panel logic-left"><h3>Metric Registry</h3><div id="metricList"></div></section>
+    <section class="panel logic-right"><h3>Metric Builder</h3>
+      <div class="grid four">
+        <div class="field"><label>Metric Name</label><input id="metricName" placeholder="e.g. Breached SLA Records" /></div>
+        <div class="field"><label>Business Concept</label><select id="metricConcept"><option value="">None</option></select></div>
+        <div class="field"><label>Source</label><select id="metricSource" onchange="metricSourceChanged()"></select></div>
+        <div class="field"><label>Unit</label><input id="metricUnit" placeholder="count, %, hours..." /></div>
+      </div>
+      <div class="field" style="margin-top:8px"><label>Metric Definition</label><textarea id="metricDefinition" placeholder="What exactly does this calculation mean?"></textarea></div>
+      <div class="grid four" style="margin-top:8px">
+        <div class="field"><label>Calculation Mode</label><select id="metricMode" onchange="renderMetricMode()"><option value="aggregate">Aggregate</option><option value="datediff">Date Difference</option><option value="derived">Derived Metric</option></select></div>
+        <div class="field aggregate-mode"><label>Aggregation</label><select id="metricAgg" onchange="renderFormulaPreview()"><option value="COUNT_ROWS">COUNT ROWS</option><option value="COUNT">COUNT</option><option value="COUNT_DISTINCT">COUNT DISTINCT</option><option value="SUM">SUM</option><option value="AVG">AVERAGE</option><option value="MIN">MIN</option><option value="MAX">MAX</option><option value="MEDIAN">MEDIAN</option><option value="PERCENTILE">PERCENTILE</option></select></div>
+        <div class="field aggregate-mode"><label>Field</label><select id="metricField" onchange="renderFormulaPreview()"></select></div>
+        <div class="field aggregate-mode"><label>Percentile</label><input id="metricPercentile" type="number" min="0" max="100" value="95" oninput="renderFormulaPreview()" /></div>
+      </div>
+      <div id="datediffMode" class="grid four" style="margin-top:8px;display:none"><div class="field"><label>Start Field</label><select id="dateStart" onchange="renderFormulaPreview()"></select></div><div class="field"><label>End Field</label><select id="dateEnd" onchange="renderFormulaPreview()"></select></div><div class="field"><label>Unit</label><select id="dateUnit" onchange="renderFormulaPreview()"><option>seconds</option><option>minutes</option><option selected>hours</option><option>days</option></select></div><div class="field"><label>Aggregate Duration</label><select id="dateAgg" onchange="renderFormulaPreview()"><option>AVG</option><option>SUM</option><option>MIN</option><option>MAX</option><option>MEDIAN</option></select></div></div>
+      <div id="derivedMode" class="grid four" style="margin-top:8px;display:none"><div class="field"><label>Left Metric</label><select id="derivedLeft" onchange="renderFormulaPreview()"></select></div><div class="field"><label>Operator</label><select id="derivedOp" onchange="renderFormulaPreview()"><option value="+">+</option><option value="-">−</option><option value="*">×</option><option value="/">÷</option></select></div><div class="field"><label>Right Operand</label><select id="derivedRight" onchange="renderFormulaPreview()"></select></div><div class="field"><label>Scale Result By</label><input id="derivedScale" type="number" value="1" step="any" oninput="renderFormulaPreview()" /><small>Use 100 for percentages.</small></div></div>
+      <div class="function-groups">
+        <div class="function-group"><h4>Aggregations</h4><div>COUNT ROWS · COUNT · COUNT DISTINCT · SUM · AVG · MIN · MAX · MEDIAN · PERCENTILE</div></div>
+        <div class="function-group"><h4>Conditional / Filter</h4><div>= · != · &gt; · &gt;= · &lt; · &lt;= · IN · NOT IN · CONTAINS · NOT CONTAINS · STARTS WITH · ENDS WITH · BETWEEN · IS NULL · IS NOT NULL · IS TRUE · IS FALSE</div></div>
+        <div class="function-group"><h4>Date / Boolean / Derived</h4><div>BEFORE · AFTER · ON OR BEFORE · ON OR AFTER · AND · OR · NOT · DATEDIFF · + · − · × · ÷ · scale</div></div>
+      </div>
+      <section style="margin-top:12px"><div class="actions"><h3 style="margin:0">Filters</h3><button class="btn small" onclick="addFilter()">+ Add Filter</button></div><div id="filterRows"></div></section>
+      <div class="field" style="margin-top:10px"><label>Optional Group / Trend Dimension</label><select id="metricGroupBy" onchange="renderFormulaPreview()"><option value="">None</option></select></div>
+      <div style="margin-top:10px"><label>Formula Preview</label><div id="formulaPreview" class="formula-preview">—</div></div>
+      <div class="actions" style="margin-top:10px"><button class="btn" onclick="clearMetricBuilder()">Clear</button><button class="btn primary" onclick="saveMetricDraft()">Save Draft Metric</button></div>
+    </section>
+  </div>
+</div></section>
+
+<section class="step" id="step6"><div class="page">
+  <div class="page-head"><div><div class="eyebrow">Step 6</div><h2>Validate Calculations</h2><p>Execute draft metrics against the actual uploaded rows. Validation shows the computed result, population, matched filter rows, invalid numeric/date values, and grouping preview. Only explicitly approved metrics become available to the dashboard builder.</p></div><div class="actions"><button class="btn" onclick="validateAllMetrics()">Validate All</button><button class="btn primary" onclick="showStep(7)">Continue to Dashboard Builder</button></div></div>
+  <div id="validationContent" class="validation-grid"></div>
+</div></section>
+
+<section class="step" id="step7"><div class="page">
+  <div class="page-head"><div><div class="eyebrow">Step 7</div><h2>Build Our First Dashboard</h2><p>Start with a blank working dashboard. All promoted fields are available for dashboard filtering; validated/approved metrics are available as dashboard components. Nothing touches an Enterprise Dashboard.</p></div><div class="actions"><button class="btn primary" id="viewDashboardButton" onclick="viewDashboard()">View Dashboard</button></div></div>
+  <section class="panel"><div class="grid three" style="align-items:end"><div class="field"><label>Dashboard Name</label><input id="dashboardName" placeholder="e.g. Task SLA Intelligence" /></div><div class="field"><label>Existing Dashboard</label><select id="dashboardSelect" onchange="selectDashboard(this.value)"><option value="">None</option></select></div><div class="actions"><button class="btn primary" onclick="createDashboard()">Create Blank Dashboard</button><button class="btn danger" onclick="deleteDashboard()">Delete</button></div></div></section>
+  <section class="panel"><div class="dashboard-builder-toolbar"><div><h3 style="margin:0">Promoted Fields — Dashboard Filters</h3><div class="builder-help">Every promoted field is available here. Drag any field into the filter area. Date/time fields support Year, Quarter, Month and date-range filtering; text, number and boolean fields expose appropriate operators.</div></div></div><div id="dashboardFieldPalette" class="promoted-filter-palette"></div><div id="dashboardFilterZone" class="filter-drop-zone" ondragover="dashboardFilterDragOver(event)" ondragleave="dashboardFilterDragLeave(event)" ondrop="dashboardFilterDrop(event)"><div id="dashboardFilterBar"></div></div></section>
+  <div class="builder"><aside class="palette"><h3>Approved Metrics</h3><p class="muted" style="font-size:10px">Drag metrics into a horizontal or vertical structure. Components can be moved, reordered and resized after placement.</p><div id="dashboardMetricPalette" class="metric-palette-scroll"></div><div class="palette-section-title">Layout structures</div><div class="layout-structure-palette"><div class="layout-structure-item" draggable="true" ondragstart="dragDashboardStructure(event,'horizontal')" ondblclick="addDashboardSection('horizontal')">Horizontal Row</div><div class="layout-structure-item" draggable="true" ondragstart="dragDashboardStructure(event,'vertical')" ondblclick="addDashboardSection('vertical')">Vertical Stack</div></div><div class="palette-section-title">Visualization engine</div><div class="builder-help">KPI · Table · Bar · Line · Pie · Scatter. Charts use Pandas + NumPy + Matplotlib in-browser when available, with a native fallback.</div></aside><main><div id="dashboardCanvas" class="canvas" ondragover="dashboardDragOver(event)" ondragleave="dashboardDragLeave(event)" ondrop="dashboardDrop(event)"></div></main></div>
+</div></section>
+<div class="dashboard-preview-overlay" id="dashboardPreviewOverlay" aria-hidden="true"><div class="dashboard-preview-shell"><div class="dashboard-preview-head"><div><div class="eyebrow">Working Dashboard</div><h2 id="dashboardPreviewTitle" style="margin:0;color:var(--blue)">Dashboard</h2></div><div class="actions"><button class="btn" onclick="refreshDashboardPreview()">Refresh</button><button class="btn primary" onclick="closeDashboardView()">Back to Builder</button></div></div><div class="dashboard-preview-body"><div id="dashboardPreviewFilters" class="dashboard-preview-filters"></div><div id="dashboardPreviewGrid" class="dashboard-preview-grid"></div></div></div></div>
+</div>
+<script>
+'use strict';
+const STORAGE_KEY='esi_from_scratch_state_v1';
+const DB_NAME='esi_from_scratch_sources_v1';
+const DB_STORE='sources';
+const rowCache=new Map();
+let activeStep=0;
+let dragMetricId='';
+let dragFieldId='';
+let dragComponentId='';
+const freshState=()=>({version:1,sources:[],currentSourceId:'',fields:{},relationships:[],concepts:[],metrics:[],dashboards:[],currentDashboardId:''});
+let state=loadState();
+function loadState(){try{const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||'');return x&&x.version===1?Object.assign(freshState(),x):freshState()}catch(_){return freshState()}}
+function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function slug(v){return String(v??'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'item'}
+function fmt(n,d=0){return Number.isFinite(Number(n))?Number(n).toLocaleString(undefined,{maximumFractionDigits:d}):'—'}
+function pct(n,d=1){return Number.isFinite(Number(n))?Number(n).toFixed(d)+'%':'—'}
+function sourceById(id){return state.sources.find(s=>s.id===id)||null}
+function fieldById(id){return state.fields[id]||null}
+function metricById(id){return state.metrics.find(m=>m.id===id)||null}
+function dashboardById(id){return state.dashboards.find(d=>d.id===id)||null}
+function currentSource(){return sourceById(state.currentSourceId)||state.sources.at(-1)||null}
+function showStep(n){activeStep=Number(n);document.querySelectorAll('.step').forEach((el,i)=>el.classList.toggle('active',i===activeStep));document.querySelectorAll('.workflow button').forEach(b=>b.classList.toggle('active',Number(b.dataset.step)===activeStep));renderStep(activeStep)}
+function renderStep(n){if(n===0)renderSourceInventory();if(n===1)renderProfile();if(n===2)renderFieldStaging();if(n===3)renderRelationships();if(n===4)renderConcepts();if(n===5)renderMetricBuilder();if(n===6)renderValidation();if(n===7)renderDashboardBuilder()}
+
+function openDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE,{keyPath:'id'})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
+async function dbPutSource(obj){const db=await openDb();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(obj);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}
+async function dbGetSource(id){const db=await openDb();const result=await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const r=tx.objectStore(DB_STORE).get(id);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error)});db.close();return result}
+async function dbDeleteSource(id){const db=await openDb();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}
+async function dbClear(){const db=await openDb();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}
+
+function parseCsv(text){const rows=[];let row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(quoted){if(c==='"'&&n==='"'){cell+='"';i++}else if(c==='"'){quoted=false}else cell+=c}else{if(c==='"')quoted=true;else if(c===','){row.push(cell);cell=''}else if(c==='\n'){row.push(cell);rows.push(row);row=[];cell=''}else if(c!=='\r')cell+=c}}if(cell.length||row.length){row.push(cell);rows.push(row)}if(!rows.length)return{headers:[],rows:[]};const rawHeaders=rows.shift().map((h,i)=>String(h||`column_${i+1}`).trim());const seen={};const headers=rawHeaders.map(h=>{const k=h||'column';seen[k]=(seen[k]||0)+1;return seen[k]===1?k:`${k}__${seen[k]}`});const objs=rows.filter(r=>r.some(v=>String(v).trim()!=='')).map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]??''])));return{headers,rows:objs}}
+function isBlank(v){return v===null||v===undefined||String(v).trim()===''}
+function truthyValue(v){const s=String(v??'').trim().toLowerCase();return ['true','1','yes','y','t'].includes(s)}
+function falseyValue(v){const s=String(v??'').trim().toLowerCase();return ['false','0','no','n','f'].includes(s)}
+function detectType(values){const vals=values.filter(v=>!isBlank(v));if(!vals.length)return'Empty';const sample=vals.slice(0,500);if(sample.every(v=>truthyValue(v)||falseyValue(v)))return'Boolean';if(sample.every(v=>Number.isFinite(Number(String(v).replace(/[$,%]/g,'')))))return'Number';const dateLike=sample.filter(v=>{const s=String(v).trim();return /[-/:T]/.test(s)&&Number.isFinite(Date.parse(s))}).length;if(dateLike/sample.length>=.9)return'Date/Time';return'Text'}
+function profileField(rows,header){const vals=rows.map(r=>r[header]);const nonblank=vals.filter(v=>!isBlank(v));const distinct=new Set(nonblank.map(v=>String(v))).size;const type=detectType(vals);let min='—',max='—';if(type==='Number'){const nums=nonblank.map(v=>Number(String(v).replace(/[$,%]/g,''))).filter(Number.isFinite);if(nums.length){min=Math.min(...nums);max=Math.max(...nums)}}else if(type==='Date/Time'){const ds=nonblank.map(v=>Date.parse(v)).filter(Number.isFinite);if(ds.length){min=new Date(Math.min(...ds)).toISOString();max=new Date(Math.max(...ds)).toISOString()}}return{dataType:type,nullCount:vals.length-nonblank.length,nullPct:vals.length?((vals.length-nonblank.length)/vals.length*100):0,distinctCount:distinct,distinctPct:vals.length?(distinct/vals.length*100):0,min,max,sample:nonblank.slice(0,4).map(String)}}
+function profileSource(parsed){const serialized=parsed.rows.map(r=>parsed.headers.map(h=>String(r[h]??'')).join('\u001f'));const dup=serialized.length-new Set(serialized).size;return{rowCount:parsed.rows.length,columnCount:parsed.headers.length,duplicateRows:dup,fields:Object.fromEntries(parsed.headers.map(h=>[h,profileField(parsed.rows,h)]))}}
+function defaultRole(type){if(type==='Date/Time')return'Date/Time';if(type==='Boolean')return'Flag';if(type==='Number')return'Measure';return'Unknown'}
+
+async function uploadOneSource(file){if(!file)return;const status=document.getElementById('uploadStatus');const sameName=state.sources.filter(s=>s.name===file.name);if(sameName.length&&!confirm(`A source named ${file.name} is already registered. Upload this as another source version?`))return;status.className='notice';status.textContent='Reading '+file.name+'...';try{const text=await file.text();const parsed=parseCsv(text);if(!parsed.headers.length)throw new Error('No CSV headers found.');const id='src_'+slug(file.name.replace(/\.csv$/i,''))+'_'+Date.now().toString(36);const profile=profileSource(parsed);const meta={id,name:file.name,size:file.size,headers:parsed.headers,rowCount:parsed.rows.length,uploadedAt:new Date().toISOString(),profile};state.sources.push(meta);state.currentSourceId=id;for(const h of parsed.headers){const p=profile.fields[h],fid=id+'::'+h;state.fields[fid]={id:fid,sourceId:id,header:h,dataType:p.dataType,status:'Unreviewed',role:defaultRole(p.dataType),meaning:'',isPrimaryKey:false,isRelationshipKey:false}}rowCache.set(id,parsed.rows);await dbPutSource({id,name:file.name,text});saveState();status.className='notice good';status.textContent=`${file.name} registered: ${fmt(parsed.rows.length)} rows · ${parsed.headers.length} headers. Continue to Step 1.`;renderSourceInventory()}catch(err){status.className='notice warn';status.textContent='Upload failed: '+(err?.message||err)}}
+async function getRows(sourceId){if(rowCache.has(sourceId))return rowCache.get(sourceId);const rec=await dbGetSource(sourceId);if(!rec){const s=sourceById(sourceId);throw new Error(`Raw CSV data is unavailable for ${s?.name||sourceId}. Re-upload the file or delete the stale source registration.`)}const rows=parseCsv(rec.text).rows;rowCache.set(sourceId,rows);return rows}
+
+function sourceMetricDependencyIds(sourceId){const fieldIds=new Set(Object.values(state.fields).filter(f=>f.sourceId===sourceId).map(f=>f.id)),ids=new Set(state.metrics.filter(m=>m.sourceId===sourceId||fieldIds.has(m.fieldId)||fieldIds.has(m.dateStartFieldId)||fieldIds.has(m.dateEndFieldId)||fieldIds.has(m.groupByFieldId)||(m.filters||[]).some(f=>fieldIds.has(f.fieldId))).map(m=>m.id));let changed=true;while(changed){changed=false;for(const m of state.metrics){if(ids.has(m.id))continue;if(m.mode==='derived'&&(ids.has(m.derivedLeftMetricId)||ids.has(m.derivedRightMetricId))){ids.add(m.id);changed=true}}}return ids}
+function sourceDependencySummary(sourceId){const fieldIds=new Set(Object.values(state.fields).filter(f=>f.sourceId===sourceId).map(f=>f.id)),metricIds=sourceMetricDependencyIds(sourceId),relationships=state.relationships.filter(r=>fieldIds.has(r.leftFieldId)||fieldIds.has(r.rightFieldId)).length,conceptLinks=state.concepts.reduce((n,c)=>n+(c.fieldIds||[]).filter(id=>fieldIds.has(id)).length,0);let dashboardFilters=0,dashboardComponents=0,visualMappings=0;for(const d of state.dashboards){dashboardFilters+=(d.filters||[]).filter(f=>fieldIds.has(f.fieldId)).length;dashboardComponents+=(d.components||[]).filter(c=>metricIds.has(c.metricId)||metricIds.has(c.visualMap?.yMetricId)).length;visualMappings+=(d.components||[]).filter(c=>fieldIds.has(c.visualMap?.xFieldId)||fieldIds.has(c.visualMap?.seriesFieldId)).length}return{fieldIds,metricIds,relationships,conceptLinks,dashboardFilters,dashboardComponents,visualMappings}}
+async function deleteSource(sourceId){const s=sourceById(sourceId);if(!s)return;const dep=sourceDependencySummary(sourceId);const msg=`Delete ${s.name}?\n\nThis safely removes its raw CSV data and ${dep.fieldIds.size} staged field(s), ${dep.relationships} relationship(s), ${dep.metricIds.size} dependent metric(s), ${dep.dashboardFilters} dashboard filter(s), ${dep.dashboardComponents} dashboard component(s), and clears ${dep.visualMappings} X/Series mapping(s). Business concept definitions and dashboard shells are preserved.`;if(!confirm(msg))return;const fieldIds=dep.fieldIds,metricIds=dep.metricIds;state.sources=state.sources.filter(x=>x.id!==sourceId);for(const id of fieldIds)delete state.fields[id];state.relationships=state.relationships.filter(r=>!fieldIds.has(r.leftFieldId)&&!fieldIds.has(r.rightFieldId));state.concepts.forEach(c=>c.fieldIds=(c.fieldIds||[]).filter(id=>!fieldIds.has(id)));state.metrics=state.metrics.filter(m=>!metricIds.has(m.id));for(const d of state.dashboards){d.filters=(d.filters||[]).filter(f=>!fieldIds.has(f.fieldId));d.components=(d.components||[]).filter(c=>!metricIds.has(c.metricId)&&!metricIds.has(c.visualMap?.yMetricId));d.components.forEach(c=>{if(fieldIds.has(c.visualMap?.xFieldId))c.visualMap.xFieldId='';if(fieldIds.has(c.visualMap?.seriesFieldId))c.visualMap.seriesFieldId=''});const valid=new Set(d.components.map(c=>c.id));(d.sections||[]).forEach(sec=>sec.componentIds=(sec.componentIds||[]).filter(id=>valid.has(id)))}if(state.currentSourceId===sourceId)state.currentSourceId=state.sources.at(-1)?.id||'';rowCache.delete(sourceId);await dbDeleteSource(sourceId);saveState();renderStep(activeStep)}
+async function clearCsvSources(){if(!state.sources.length)return;if(!confirm(`Clear all ${state.sources.length} CSV source(s)?\n\nRaw CSV data, staged fields, relationships, metrics, validations, dashboard filters/components and source-field links will be removed. Business concept definitions and empty dashboard shells will be preserved. Use Reset Lab to delete absolutely everything.`))return;state.sources=[];state.currentSourceId='';state.fields={};state.relationships=[];state.concepts.forEach(c=>c.fieldIds=[]);state.metrics=[];state.dashboards.forEach(d=>{d.filters=[];d.components=[];(d.sections||[]).forEach(sec=>sec.componentIds=[])});rowCache.clear();await dbClear();saveState();document.getElementById('uploadStatus').className='notice';document.getElementById('uploadStatus').textContent='CSV sources cleared. Business concepts and dashboard shells were preserved.';renderStep(activeStep)}
+async function refreshSourceHealth(){for(const s of state.sources){const el=document.getElementById('sourceHealth_'+s.id);if(!el)continue;try{const rec=await dbGetSource(s.id);el.className='badge '+(rec?'good':'warn');el.textContent=rec?'Raw data ready':'Raw data missing'}catch(_){el.className='badge warn';el.textContent='Storage check failed'}}}
+function renderSourceInventory(){const host=document.getElementById('sourceInventory');if(!host)return;if(!state.sources.length){host.innerHTML='<div class="empty"><b>No sources yet.</b>Upload the first CSV above.</div>';return}host.innerHTML='<div class="actions" style="justify-content:flex-end;margin-bottom:9px"><button class="btn small danger" onclick="clearCsvSources()">Clear CSV Sources</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Source</th><th>Rows</th><th>Headers</th><th>Raw Data</th><th>Uploaded</th><th></th></tr></thead><tbody>'+state.sources.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${fmt(s.rowCount)}</td><td>${s.headers.length}</td><td><span id="sourceHealth_${esc(s.id)}" class="badge blue">Checking…</span></td><td>${esc(new Date(s.uploadedAt).toLocaleString())}</td><td><div class="actions"><button class="btn small" onclick="selectSource('${esc(s.id)}',1)">Analyze</button><button class="btn small danger" onclick="deleteSource('${esc(s.id)}')">Delete</button></div></td></tr>`).join('')+'</tbody></table></div>';refreshSourceHealth()}
+function selectSource(id,nextStep){state.currentSourceId=id;saveState();showStep(nextStep)}
+function renderSourcePicker(hostId,onStep){const host=document.getElementById(hostId);if(!host)return;host.innerHTML=state.sources.map(s=>`<button class="source-chip ${s.id===currentSource()?.id?'active':''}" onclick="selectSource('${esc(s.id)}',${onStep})">${esc(s.name)}</button>`).join('')}
+function renderProfile(){renderSourcePicker('profileSourcePicker',1);const host=document.getElementById('profileContent'),s=currentSource();if(!s){host.innerHTML='<div class="empty"><b>No source selected.</b>Upload a CSV in Step 0.</div>';return}const p=s.profile;host.innerHTML=`<div class="grid cards"><div class="card profile-card"><b>Rows</b><div class="big">${fmt(p.rowCount)}</div></div><div class="card profile-card"><b>Headers</b><div class="big">${p.columnCount}</div></div><div class="card profile-card"><b>Duplicate Rows</b><div class="big">${fmt(p.duplicateRows)}</div></div><div class="card profile-card"><b>Source</b><div class="big" style="font-size:16px">${esc(s.name)}</div><div class="sub">${esc(new Date(s.uploadedAt).toLocaleString())}</div></div></div><section class="panel" style="margin-top:14px"><h3>Header Profile</h3><div class="table-wrap"><table class="table"><thead><tr><th>Header</th><th>Detected Type</th><th>Sample Values</th><th>Nulls</th><th>Null %</th><th>Distinct</th><th>Distinct %</th><th>Min</th><th>Max</th></tr></thead><tbody>${s.headers.map(h=>{const x=p.fields[h];return `<tr><td><b>${esc(h)}</b></td><td>${esc(x.dataType)}</td><td>${esc(x.sample.join(' | '))}</td><td>${fmt(x.nullCount)}</td><td>${pct(x.nullPct)}</td><td>${fmt(x.distinctCount)}</td><td>${pct(x.distinctPct)}</td><td class="mono">${esc(x.min)}</td><td class="mono">${esc(x.max)}</td></tr>`}).join('')}</tbody></table></div></section>`}
+
+function renderFieldStaging(){renderSourcePicker('fieldSourcePicker',2);const host=document.getElementById('fieldStageContent'),s=currentSource();if(!s){host.innerHTML='<div class="empty"><b>No source selected.</b></div>';return}const roles=['Unknown','Identifier','Relationship Key','Dimension','Measure','Date/Time','Flag','Descriptive Text'];host.innerHTML=`<div class="actions" style="margin-bottom:10px"><button class="btn small" onclick="setAllFieldStatus('Promoted')">Promote All</button><button class="btn small" onclick="setAllFieldStatus('Held')">Hold All</button><button class="btn small" onclick="setAllFieldStatus('Ignored')">Ignore All</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Header</th><th>Type</th><th>Sample</th><th>Null %</th><th>Distinct %</th><th>What Does This Field Mean?</th><th>Structural Role</th><th>Status</th></tr></thead><tbody>${s.headers.map(h=>{const f=state.fields[s.id+'::'+h],p=s.profile.fields[h];return `<tr><td><b>${esc(h)}</b></td><td>${esc(p.dataType)}</td><td>${esc(p.sample.join(' | '))}</td><td>${pct(p.nullPct)}</td><td>${pct(p.distinctPct)}</td><td><input value="${esc(f.meaning)}" placeholder="User-defined meaning" onchange="updateField('${esc(f.id)}','meaning',this.value)"></td><td><select onchange="updateField('${esc(f.id)}','role',this.value)">${roles.map(r=>`<option ${r===f.role?'selected':''}>${esc(r)}</option>`).join('')}</select></td><td><select class="stage-status" onchange="updateField('${esc(f.id)}','status',this.value)">${['Unreviewed','Promoted','Held','Ignored'].map(x=>`<option ${x===f.status?'selected':''}>${x}</option>`).join('')}</select></td></tr>`}).join('')}</tbody></table></div>`}
+function updateField(id,key,value){if(!state.fields[id])return;state.fields[id][key]=value;saveState();if(activeStep===3)renderRelationships();if(activeStep===4)renderConcepts();if(activeStep===5)renderMetricBuilder();if(activeStep===7)renderDashboardBuilder()}
+function setAllFieldStatus(status){const s=currentSource();if(!s)return;s.headers.forEach(h=>state.fields[s.id+'::'+h].status=status);saveState();renderFieldStaging()}
+function promotedFields(sourceId=null){return Object.values(state.fields).filter(f=>f.status==='Promoted'&&(!sourceId||f.sourceId===sourceId))}
+function fieldLabel(f){const s=sourceById(f.sourceId);return `${s?.name||f.sourceId} · ${f.header}`}
+function allFieldOptions(selected='',sourceId=null,onlyPromoted=true){const fields=Object.values(state.fields).filter(f=>(!sourceId||f.sourceId===sourceId)&&(!onlyPromoted||f.status==='Promoted'));return '<option value="">Select field</option>'+fields.map(f=>`<option value="${esc(f.id)}" ${f.id===selected?'selected':''}>${esc(fieldLabel(f))}</option>`).join('')}
+
+function renderRelationships(){const keyHost=document.getElementById('keyCandidates'),relHost=document.getElementById('relationshipList'),left=document.getElementById('relLeft'),right=document.getElementById('relRight');const promoted=promotedFields();if(!promoted.length){keyHost.innerHTML='<div class="empty"><b>No promoted fields.</b>Promote fields in Step 2 first.</div>'}else{keyHost.innerHTML='<div class="relationship-candidates">'+promoted.map(f=>{const s=sourceById(f.sourceId),p=s.profile.fields[f.header],candidate=p.nullCount===0&&p.distinctPct>=95;return `<div class="candidate"><div class="actions" style="justify-content:space-between"><strong>${esc(f.header)}</strong><span class="badge ${candidate?'good':'warn'}">${candidate?'High uniqueness':'Review'}</span></div><div class="meta">${esc(s.name)} · ${pct(p.distinctPct)} distinct · ${fmt(p.nullCount)} nulls</div><div class="actions" style="margin-top:8px"><button class="btn small ${f.isPrimaryKey?'primary':''}" onclick="toggleKey('${esc(f.id)}','primary')">${f.isPrimaryKey?'Primary Key ✓':'Set Primary Key'}</button><button class="btn small ${f.isRelationshipKey?'primary':''}" onclick="toggleKey('${esc(f.id)}','relationship')">${f.isRelationshipKey?'Relationship Key ✓':'Mark Relationship Key'}</button></div></div>`}).join('')+'</div>'}left.innerHTML=allFieldOptions('',null,true);right.innerHTML=allFieldOptions('',null,true);if(!state.relationships.length)relHost.innerHTML='<div class="empty"><b>No confirmed relationships.</b>With one source, you may only need a primary key. Add source-to-source joins as more CSVs arrive.</div>';else relHost.innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Left</th><th>Relationship</th><th>Right</th><th></th></tr></thead><tbody>'+state.relationships.map(r=>`<tr><td>${esc(fieldLabel(fieldById(r.leftFieldId)))}</td><td>${esc(r.type)}</td><td>${esc(fieldLabel(fieldById(r.rightFieldId)))}</td><td><button class="btn small danger" onclick="removeRelationship('${esc(r.id)}')">Remove</button></td></tr>`).join('')+'</tbody></table></div>'}
+function toggleKey(id,type){const f=fieldById(id);if(!f)return;if(type==='primary'){Object.values(state.fields).filter(x=>x.sourceId===f.sourceId).forEach(x=>x.isPrimaryKey=false);f.isPrimaryKey=!f.isPrimaryKey}else f.isRelationshipKey=!f.isRelationshipKey;saveState();renderRelationships()}
+function addRelationship(){const l=document.getElementById('relLeft').value,r=document.getElementById('relRight').value,t=document.getElementById('relType').value;if(!l||!r||l===r)return alert('Choose two different fields.');if(state.relationships.some(x=>(x.leftFieldId===l&&x.rightFieldId===r)||(x.leftFieldId===r&&x.rightFieldId===l)))return alert('That field relationship is already registered.');state.relationships.push({id:'rel_'+Date.now().toString(36),leftFieldId:l,rightFieldId:r,type:t,createdAt:new Date().toISOString()});state.fields[l].isRelationshipKey=true;state.fields[r].isRelationshipKey=true;saveState();renderRelationships()}
+function removeRelationship(id){state.relationships=state.relationships.filter(r=>r.id!==id);saveState();renderRelationships()}
+
+function renderConcepts(){const fields=document.getElementById('conceptFields'),host=document.getElementById('conceptList');const promoted=promotedFields();fields.innerHTML=promoted.map(f=>`<option value="${esc(f.id)}">${esc(fieldLabel(f))}</option>`).join('');if(!state.concepts.length)host.innerHTML='<div class="empty"><b>0 business concepts.</b>Create the first concept from scratch using the form.</div>';else host.innerHTML=state.concepts.map(c=>`<div class="concept-card"><div class="actions" style="justify-content:space-between"><h4>${esc(c.name)}</h4><button class="btn small danger" onclick="deleteConcept('${esc(c.id)}')">Delete</button></div><p>${esc(c.definition)}</p><div class="field-tags">${c.fieldIds.map(id=>fieldById(id)).filter(Boolean).map(f=>`<span class="tag">${esc(f.header)}</span>`).join('')}</div></div>`).join('')}
+function saveConcept(){const name=document.getElementById('conceptName').value.trim(),definition=document.getElementById('conceptDefinition').value.trim(),fieldIds=[...document.getElementById('conceptFields').selectedOptions].map(o=>o.value);if(!name||!definition)return alert('Concept name and definition are required.');state.concepts.push({id:'concept_'+Date.now().toString(36),name,definition,fieldIds,createdAt:new Date().toISOString()});saveState();document.getElementById('conceptName').value='';document.getElementById('conceptDefinition').value='';renderConcepts()}
+function deleteConcept(id){state.concepts=state.concepts.filter(c=>c.id!==id);state.metrics.forEach(m=>{if(m.conceptId===id)m.conceptId=''});saveState();renderConcepts()}
+
+const FILTER_OPS=['=','!=','>','>=','<','<=','IN','NOT IN','CONTAINS','NOT CONTAINS','STARTS WITH','ENDS WITH','BETWEEN','IS NULL','IS NOT NULL','IS TRUE','IS FALSE','BEFORE','AFTER','ON OR BEFORE','ON OR AFTER'];
+let draftFilters=[];
+function renderMetricBuilder(){const concept=document.getElementById('metricConcept'),source=document.getElementById('metricSource'),list=document.getElementById('metricList');concept.innerHTML='<option value="">None</option>'+state.concepts.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');source.innerHTML='<option value="">Select source</option>'+state.sources.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');if(!source.value&&currentSource())source.value=currentSource().id;populateMetricFieldOptions();renderMetricMode();if(!state.metrics.length)list.innerHTML='<div class="empty"><b>0 metrics.</b>Build the first metric from scratch on the right.</div>';else list.innerHTML=state.metrics.map(m=>`<div class="metric-card"><div class="actions" style="justify-content:space-between"><h4>${esc(m.name)}</h4><span class="badge ${m.status==='Approved'?'good':m.status==='Validated'?'blue':'warn'}">${esc(m.status)}</span></div><p>${esc(m.definition)}</p><div class="mono">${esc(m.formulaPreview||'')}</div><div class="actions" style="margin-top:7px"><button class="btn small" onclick="editMetric('${esc(m.id)}')">Edit</button><button class="btn small danger" onclick="deleteMetric('${esc(m.id)}')">Delete</button></div></div>`).join('');renderDerivedOptions();renderFilterRows();renderFormulaPreview()}
+function metricSourceChanged(){populateMetricFieldOptions();renderFilterRows();renderFormulaPreview()}
+function populateMetricFieldOptions(){const sid=document.getElementById('metricSource')?.value||currentSource()?.id||'';['metricField','dateStart','dateEnd','metricGroupBy'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=(id==='metricGroupBy'?'<option value="">None</option>':'<option value="">Select field</option>')+promotedFields(sid).map(f=>`<option value="${esc(f.id)}">${esc(f.header)}</option>`).join('')})}
+function renderDerivedOptions(){const left=document.getElementById('derivedLeft'),right=document.getElementById('derivedRight');if(!left||!right)return;const opts='<option value="">Select metric</option>'+state.metrics.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');left.innerHTML=opts;right.innerHTML='<option value="">Select metric or use scale only</option>'+state.metrics.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('')}
+function renderMetricMode(){const mode=document.getElementById('metricMode')?.value||'aggregate';document.querySelectorAll('.aggregate-mode').forEach(e=>e.style.display=mode==='aggregate'?'block':'none');document.getElementById('datediffMode').style.display=mode==='datediff'?'grid':'none';document.getElementById('derivedMode').style.display=mode==='derived'?'grid':'none';renderFormulaPreview()}
+function addFilter(){draftFilters.push({id:'flt_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),conjunction:draftFilters.length?'AND':'',fieldId:'',op:'=',value:'',value2:''});renderFilterRows();renderFormulaPreview()}
+function renderFilterRows(){const host=document.getElementById('filterRows');if(!host)return;const sid=document.getElementById('metricSource')?.value||'';if(!draftFilters.length){host.innerHTML='<div class="muted" style="font-size:10px;margin-top:7px">No filters. The calculation uses all rows in the selected source.</div>';return}host.innerHTML=draftFilters.map((f,i)=>`<div class="filter-row"><div class="field"><label>Join</label><select onchange="updateFilter('${f.id}','conjunction',this.value)" ${i===0?'disabled':''}><option ${f.conjunction==='AND'?'selected':''}>AND</option><option ${f.conjunction==='OR'?'selected':''}>OR</option></select></div><div class="field"><label>Field</label><select onchange="updateFilter('${f.id}','fieldId',this.value)">${allFieldOptions(f.fieldId,sid,true)}</select></div><div class="field"><label>Operator</label><select onchange="updateFilter('${f.id}','op',this.value)">${FILTER_OPS.map(op=>`<option ${op===f.op?'selected':''}>${esc(op)}</option>`).join('')}</select></div><div class="field"><label>Value</label><input value="${esc(f.value)}" placeholder="true, Completed, 100..." oninput="updateFilter('${f.id}','value',this.value,false)"></div><div class="field"><label>Second Value</label><input value="${esc(f.value2)}" placeholder="For BETWEEN" oninput="updateFilter('${f.id}','value2',this.value,false)"></div><button class="btn small danger remove" onclick="removeFilter('${f.id}')">Remove</button></div>`).join('')}
+function updateFilter(id,key,value,rerender=true){const f=draftFilters.find(x=>x.id===id);if(!f)return;f[key]=value;if(rerender)renderFilterRows();renderFormulaPreview()}
+function removeFilter(id){draftFilters=draftFilters.filter(f=>f.id!==id);if(draftFilters.length)draftFilters[0].conjunction='';renderFilterRows();renderFormulaPreview()}
+function filterToText(f){const field=fieldById(f.fieldId)?.header||'[field]';const noValue=['IS NULL','IS NOT NULL','IS TRUE','IS FALSE'].includes(f.op);const between=f.op==='BETWEEN';return `${field} ${f.op}${noValue?'':between?` ${JSON.stringify(f.value)} AND ${JSON.stringify(f.value2)}`:` ${JSON.stringify(f.value)}`}`}
+function buildFormulaPreview(){const mode=document.getElementById('metricMode')?.value||'aggregate';let core='';if(mode==='aggregate'){const agg=document.getElementById('metricAgg').value,f=fieldById(document.getElementById('metricField').value),p=document.getElementById('metricPercentile').value;core=agg==='COUNT_ROWS'?'COUNT_ROWS()':agg==='PERCENTILE'?`PERCENTILE(${f?.header||'[field]'}, ${p})`:`${agg}(${f?.header||'[field]'})`}else if(mode==='datediff'){const a=fieldById(document.getElementById('dateStart').value),b=fieldById(document.getElementById('dateEnd').value),unit=document.getElementById('dateUnit').value,agg=document.getElementById('dateAgg').value;core=`${agg}(DATEDIFF(${a?.header||'[start]'}, ${b?.header||'[end]'}, ${unit}))`}else{const l=metricById(document.getElementById('derivedLeft').value),r=metricById(document.getElementById('derivedRight').value),op=document.getElementById('derivedOp').value,scale=document.getElementById('derivedScale').value||1;core=`(${l?.name||'[left metric]'} ${op} ${r?.name||'[right metric]'}) * ${scale}`}if(draftFilters.length&&mode!=='derived'){core+='\nWHERE '+draftFilters.map((f,i)=>(i?`${f.conjunction} `:'')+filterToText(f)).join('\n      ')}const g=fieldById(document.getElementById('metricGroupBy')?.value);if(g)core+=`\nGROUP BY ${g.header}`;return core}
+function renderFormulaPreview(){const el=document.getElementById('formulaPreview');if(el)el.textContent=buildFormulaPreview()||'—'}
+function clearMetricBuilder(){['metricName','metricUnit','metricDefinition'].forEach(id=>document.getElementById(id).value='');document.getElementById('metricConcept').value='';document.getElementById('metricMode').value='aggregate';document.getElementById('metricAgg').value='COUNT_ROWS';draftFilters=[];document.getElementById('metricName').dataset.editId='';renderMetricBuilder()}
+function metricFormData(){const name=document.getElementById('metricName').value.trim(),definition=document.getElementById('metricDefinition').value.trim(),mode=document.getElementById('metricMode').value,sourceId=document.getElementById('metricSource').value;return{name,definition,conceptId:document.getElementById('metricConcept').value,sourceId,unit:document.getElementById('metricUnit').value.trim(),mode,aggregation:document.getElementById('metricAgg').value,fieldId:document.getElementById('metricField').value,percentile:Number(document.getElementById('metricPercentile').value||95),dateStartFieldId:document.getElementById('dateStart').value,dateEndFieldId:document.getElementById('dateEnd').value,dateUnit:document.getElementById('dateUnit').value,dateAgg:document.getElementById('dateAgg').value,derivedLeftMetricId:document.getElementById('derivedLeft').value,derivedRightMetricId:document.getElementById('derivedRight').value,derivedOp:document.getElementById('derivedOp').value,derivedScale:Number(document.getElementById('derivedScale').value||1),groupByFieldId:document.getElementById('metricGroupBy').value,filters:JSON.parse(JSON.stringify(draftFilters)),formulaPreview:buildFormulaPreview()}}
+function saveMetricDraft(){const d=metricFormData();if(!d.name||!d.definition)return alert('Metric name and definition are required.');if(d.mode!=='derived'&&!d.sourceId)return alert('Choose a source.');if(d.mode==='aggregate'&&d.aggregation!=='COUNT_ROWS'&&!d.fieldId)return alert('Choose a field for the aggregation.');if(d.mode==='datediff'&&(!d.dateStartFieldId||!d.dateEndFieldId))return alert('Choose both date fields.');if(d.mode==='derived'&&(!d.derivedLeftMetricId||!d.derivedRightMetricId))return alert('Choose left and right metrics.');if(d.filters.some(f=>!f.fieldId))return alert('Every filter needs a field.');const editId=document.getElementById('metricName').dataset.editId||'';if(editId){const m=metricById(editId);Object.assign(m,d,{status:'Draft',validation:null,updatedAt:new Date().toISOString()})}else state.metrics.push(Object.assign({id:'metric_'+Date.now().toString(36),status:'Draft',validation:null,createdAt:new Date().toISOString()},d));saveState();clearMetricBuilder();renderMetricBuilder()}
+function editMetric(id){const m=metricById(id);if(!m)return;document.getElementById('metricName').value=m.name;document.getElementById('metricName').dataset.editId=m.id;document.getElementById('metricDefinition').value=m.definition;document.getElementById('metricUnit').value=m.unit||'';document.getElementById('metricConcept').value=m.conceptId||'';document.getElementById('metricSource').value=m.sourceId||'';populateMetricFieldOptions();document.getElementById('metricMode').value=m.mode;document.getElementById('metricAgg').value=m.aggregation||'COUNT_ROWS';document.getElementById('metricField').value=m.fieldId||'';document.getElementById('metricPercentile').value=m.percentile||95;document.getElementById('dateStart').value=m.dateStartFieldId||'';document.getElementById('dateEnd').value=m.dateEndFieldId||'';document.getElementById('dateUnit').value=m.dateUnit||'hours';document.getElementById('dateAgg').value=m.dateAgg||'AVG';renderDerivedOptions();document.getElementById('derivedLeft').value=m.derivedLeftMetricId||'';document.getElementById('derivedRight').value=m.derivedRightMetricId||'';document.getElementById('derivedOp').value=m.derivedOp||'/';document.getElementById('derivedScale').value=m.derivedScale||1;document.getElementById('metricGroupBy').value=m.groupByFieldId||'';draftFilters=JSON.parse(JSON.stringify(m.filters||[]));renderMetricMode();renderFilterRows();renderFormulaPreview()}
+function metricDependencyClosure(id){const ids=new Set([id]);let changed=true;while(changed){changed=false;for(const m of state.metrics){if(ids.has(m.id))continue;if(m.mode==='derived'&&(ids.has(m.derivedLeftMetricId)||ids.has(m.derivedRightMetricId))){ids.add(m.id);changed=true}}}return ids}
+function deleteMetric(id){const m=metricById(id);if(!m)return;const ids=metricDependencyClosure(id),dependent=Math.max(0,ids.size-1);let cardCount=0;for(const d of state.dashboards)cardCount+=(d.components||[]).filter(c=>ids.has(c.metricId)||ids.has(c.visualMap?.yMetricId)).length;if((dependent||cardCount)&&!confirm(`Delete ${m.name}? This also removes ${dependent} derived metric(s) that depend on it and ${cardCount} dashboard component(s).`))return;state.metrics=state.metrics.filter(x=>!ids.has(x.id));for(const d of state.dashboards){d.components=(d.components||[]).filter(c=>!ids.has(c.metricId)&&!ids.has(c.visualMap?.yMetricId));const valid=new Set(d.components.map(c=>c.id));(d.sections||[]).forEach(sec=>sec.componentIds=(sec.componentIds||[]).filter(cid=>valid.has(cid)))}saveState();renderMetricBuilder()}
+
+function compareValues(raw,op,v1,v2){const s=String(raw??''),t=s.trim(),a=String(v1??''),b=String(v2??'');const n=Number(t.replace(/[$,%]/g,'')),n1=Number(a.replace(/[$,%]/g,'')),n2=Number(b.replace(/[$,%]/g,''));const d=Date.parse(t),d1=Date.parse(a),d2=Date.parse(b);switch(op){case'=':return t.toLowerCase()===a.trim().toLowerCase();case'!=':return t.toLowerCase()!==a.trim().toLowerCase();case'>':return Number.isFinite(n)&&Number.isFinite(n1)?n>n1:t>a;case'>=':return Number.isFinite(n)&&Number.isFinite(n1)?n>=n1:t>=a;case'<':return Number.isFinite(n)&&Number.isFinite(n1)?n<n1:t<a;case'<=':return Number.isFinite(n)&&Number.isFinite(n1)?n<=n1:t<=a;case'IN':return a.split(',').map(x=>x.trim().toLowerCase()).includes(t.toLowerCase());case'NOT IN':return !a.split(',').map(x=>x.trim().toLowerCase()).includes(t.toLowerCase());case'CONTAINS':return t.toLowerCase().includes(a.toLowerCase());case'NOT CONTAINS':return !t.toLowerCase().includes(a.toLowerCase());case'STARTS WITH':return t.toLowerCase().startsWith(a.toLowerCase());case'ENDS WITH':return t.toLowerCase().endsWith(a.toLowerCase());case'BETWEEN':return Number.isFinite(n)&&Number.isFinite(n1)&&Number.isFinite(n2)?n>=Math.min(n1,n2)&&n<=Math.max(n1,n2):(t>=a&&t<=b);case'IS NULL':return isBlank(raw);case'IS NOT NULL':return !isBlank(raw);case'IS TRUE':return truthyValue(raw);case'IS FALSE':return falseyValue(raw);case'BEFORE':return Number.isFinite(d)&&Number.isFinite(d1)&&d<d1;case'AFTER':return Number.isFinite(d)&&Number.isFinite(d1)&&d>d1;case'ON OR BEFORE':return Number.isFinite(d)&&Number.isFinite(d1)&&d<=d1;case'ON OR AFTER':return Number.isFinite(d)&&Number.isFinite(d1)&&d>=d1;default:return false}}
+function rowMatches(row,filters){if(!filters?.length)return true;let result=null;for(let i=0;i<filters.length;i++){const f=filters[i],field=fieldById(f.fieldId),hit=field?compareValues(row[field.header],f.op,f.value,f.value2):false;if(i===0)result=hit;else result=f.conjunction==='OR'?(result||hit):(result&&hit)}return !!result}
+function median(nums){if(!nums.length)return NaN;const a=[...nums].sort((x,y)=>x-y),m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2}
+function percentileValue(nums,p){if(!nums.length)return NaN;const a=[...nums].sort((x,y)=>x-y),idx=(Math.max(0,Math.min(100,p))/100)*(a.length-1),lo=Math.floor(idx),hi=Math.ceil(idx);return lo===hi?a[lo]:a[lo]+(a[hi]-a[lo])*(idx-lo)}
+async function evaluateMetric(metric,stack=[],runtimeFilters=[]){if(stack.includes(metric.id))throw new Error('Derived metric cycle detected.');if(metric.mode==='derived'){const l=metricById(metric.derivedLeftMetricId),r=metricById(metric.derivedRightMetricId);if(!l||!r)throw new Error('Derived metric references a missing metric.');const lv=(await evaluateMetric(l,[...stack,metric.id],runtimeFilters)).value,rv=(await evaluateMetric(r,[...stack,metric.id],runtimeFilters)).value;let v;if(metric.derivedOp==='+')v=lv+rv;else if(metric.derivedOp==='-')v=lv-rv;else if(metric.derivedOp==='*')v=lv*rv;else v=rv===0?NaN:lv/rv;v*=Number(metric.derivedScale||1);return{value:v,totalRows:0,matchedRows:0,invalidCount:0,series:null,warnings:[],unappliedFilters:[]}}const rows=await getRows(metric.sourceId),dashboardFiltered=await applyDashboardFiltersToRows(metric.sourceId,rows,runtimeFilters),matched=dashboardFiltered.rows.filter(r=>rowMatches(r,metric.filters||[]));let value=NaN,invalidCount=0;const groupField=fieldById(metric.groupByFieldId);const calcRows=async rs=>{if(metric.mode==='datediff'){const a=fieldById(metric.dateStartFieldId),b=fieldById(metric.dateEndFieldId),factor={seconds:1000,minutes:60000,hours:3600000,days:86400000}[metric.dateUnit]||3600000;const vals=[];rs.forEach(r=>{const x=Date.parse(r[a.header]),y=Date.parse(r[b.header]);if(Number.isFinite(x)&&Number.isFinite(y))vals.push((y-x)/factor);else invalidCount++});if(!vals.length)return NaN;if(metric.dateAgg==='SUM')return vals.reduce((x,y)=>x+y,0);if(metric.dateAgg==='MIN')return Math.min(...vals);if(metric.dateAgg==='MAX')return Math.max(...vals);if(metric.dateAgg==='MEDIAN')return median(vals);return vals.reduce((x,y)=>x+y,0)/vals.length}const agg=metric.aggregation,field=fieldById(metric.fieldId);if(agg==='COUNT_ROWS')return rs.length;const raw=rs.map(r=>r[field.header]).filter(v=>!isBlank(v));if(agg==='COUNT')return raw.length;if(agg==='COUNT_DISTINCT')return new Set(raw.map(String)).size;const nums=raw.map(v=>Number(String(v).replace(/[$,%]/g,''))).filter(x=>{if(Number.isFinite(x))return true;invalidCount++;return false});if(!nums.length)return NaN;if(agg==='SUM')return nums.reduce((a,b)=>a+b,0);if(agg==='AVG')return nums.reduce((a,b)=>a+b,0)/nums.length;if(agg==='MIN')return Math.min(...nums);if(agg==='MAX')return Math.max(...nums);if(agg==='MEDIAN')return median(nums);if(agg==='PERCENTILE')return percentileValue(nums,metric.percentile);return NaN};value=await calcRows(matched);let series=null;if(groupField){const groups=new Map();matched.forEach(r=>{const k=String(r[groupField.header]??'').trim()||'(blank)';if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r)});series=[];for(const [label,rs] of groups){const before=invalidCount;const v=await calcRows(rs);series.push({label,value:v,count:rs.length,invalid:invalidCount-before})}series.sort((a,b)=>(Number(b.value)||0)-(Number(a.value)||0))}const warnings=[];if(!matched.length)warnings.push('No rows matched the filters.');if(invalidCount)warnings.push(`${invalidCount} value(s) could not be used by the calculation.`);return{value,totalRows:rows.length,matchedRows:matched.length,invalidCount,series,warnings,unappliedFilters:dashboardFiltered.unapplied}}
+
+async function validateMetric(id){const m=metricById(id);if(!m)return;try{const result=await evaluateMetric(m);m.validation={...result,validatedAt:new Date().toISOString()};m.status='Validated';saveState();renderValidation()}catch(err){m.validation={error:err?.message||String(err),validatedAt:new Date().toISOString()};m.status='Draft';saveState();renderValidation()}}
+async function validateAllMetrics(){for(const m of state.metrics)await validateMetric(m.id);renderValidation()}
+function approveMetric(id){const m=metricById(id);if(!m?.validation||m.validation.error)return;m.status='Approved';saveState();renderValidation()}
+function renderValidation(){const host=document.getElementById('validationContent');if(!state.metrics.length){host.innerHTML='<div class="empty"><b>No metrics to validate.</b>Create draft metrics in Step 5.</div>';return}host.innerHTML=state.metrics.map(m=>{const v=m.validation;return `<div class="validation-card"><div class="actions" style="justify-content:space-between"><h4>${esc(m.name)}</h4><span class="badge ${m.status==='Approved'?'good':m.status==='Validated'?'blue':'warn'}">${esc(m.status)}</span></div><div class="mono">${esc(m.formulaPreview||'')}</div>${v?.error?`<div class="notice warn" style="margin-top:8px">${esc(v.error)}</div>`:v?`<div class="validation-result">${Number.isFinite(v.value)?fmt(v.value,4):'—'}</div><div class="validation-meta">Population: ${fmt(v.totalRows)} · Matched: ${fmt(v.matchedRows)} · Invalid values: ${fmt(v.invalidCount)}${v.warnings?.length?'<br>'+v.warnings.map(esc).join('<br>'):''}</div>`:'<div class="muted" style="margin-top:8px;font-size:10px">Not yet executed.</div>'}<div class="actions" style="margin-top:9px"><button class="btn small" onclick="validateMetric('${esc(m.id)}')">Validate</button><button class="btn small primary" onclick="approveMetric('${esc(m.id)}')" ${!v||v.error?'disabled':''}>Approve</button></div></div>`}).join('')}
+
+function ensureDashboardShape(db){
+  if(!db)return null;
+  if(!Array.isArray(db.components))db.components=[];
+  if(!Array.isArray(db.filters))db.filters=[];
+  if(!Array.isArray(db.sections))db.sections=[];
+  db.components.forEach(c=>{
+    if(!c.visual)c.visual='KPI';
+    if(!c.span)c.span=4;
+    if(!Number.isFinite(Number(c.minHeight)))c.minHeight=0;
+    if(!c.threshold)c.threshold={enabled:false,direction:'higher',good:'',watch:''};
+    if(!c.visualMap)c.visualMap={xFieldId:'',yMetricId:c.metricId||'',seriesFieldId:''};
+    if(!c.visualMap.yMetricId)c.visualMap.yMetricId=c.metricId||'';
+  });
+  const assigned=new Set(db.sections.flatMap(s=>Array.isArray(s.componentIds)?s.componentIds:[]));
+  const unassigned=db.components.filter(c=>!assigned.has(c.id)).map(c=>c.id);
+  if(unassigned.length){let d=db.sections.find(s=>s.id==='section_default');if(!d){d={id:'section_default',orientation:'horizontal',componentIds:[]};db.sections.unshift(d)}d.componentIds.push(...unassigned)}
+  db.sections.forEach(s=>{if(!Array.isArray(s.componentIds))s.componentIds=[];if(!['horizontal','vertical'].includes(s.orientation))s.orientation='horizontal';s.componentIds=s.componentIds.filter(id=>db.components.some(c=>c.id===id))});
+  return db
+}
+function renderDashboardBuilder(){
+  const sel=document.getElementById('dashboardSelect'),metricPalette=document.getElementById('dashboardMetricPalette'),fieldPalette=document.getElementById('dashboardFieldPalette');
+  sel.innerHTML='<option value="">None</option>'+state.dashboards.map(d=>`<option value="${esc(d.id)}" ${d.id===state.currentDashboardId?'selected':''}>${esc(d.name)}</option>`).join('');
+  const approved=state.metrics.filter(m=>m.status==='Approved');
+  metricPalette.innerHTML=approved.length?approved.map(m=>`<div class="palette-item" draggable="true" ondragstart="dragMetric(event,'${esc(m.id)}')"><b>${esc(m.name)}</b><small>${esc(m.formulaPreview||'')}</small></div>`).join(''):'<div class="empty"><b>No approved metrics.</b>Validate and approve metrics in Step 6.</div>';
+  const promoted=promotedFields();
+  fieldPalette.innerHTML=promoted.length?promoted.map(f=>{const src=sourceById(f.sourceId);return `<div class="filter-field-chip" draggable="true" ondragstart="dragDashboardField(event,'${esc(f.id)}')" ondblclick="addDashboardFilter('${esc(f.id)}')" title="Drag to filter area or double-click"><b>${esc(f.header)}</b><small>${esc(src?.name||'')} · ${esc(f.dataType)} · ${esc(f.role||'Unknown')}</small></div>`}).join(''):'<div class="empty" style="width:100%"><b>No promoted fields.</b>Promote fields in Step 2 to make them available as dashboard filters.</div>';
+  renderDashboardFilters();renderDashboardCanvas();
+}
+function createDashboard(){const name=document.getElementById('dashboardName').value.trim();if(!name)return alert('Enter a dashboard name.');const d={id:'dash_'+Date.now().toString(36),name,components:[],filters:[],sections:[],createdAt:new Date().toISOString()};state.dashboards.push(d);state.currentDashboardId=d.id;saveState();document.getElementById('dashboardName').value='';renderDashboardBuilder()}
+function selectDashboard(id){state.currentDashboardId=id;saveState();renderDashboardBuilder()}
+function deleteDashboard(){if(!state.currentDashboardId)return;const d=dashboardById(state.currentDashboardId);if(!d)return;if(!confirm(`Delete working dashboard ${d.name}? This removes its layout, filters and cards but does not delete the underlying metrics or CSV sources.`))return;state.dashboards=state.dashboards.filter(x=>x.id!==state.currentDashboardId);state.currentDashboardId=state.dashboards.at(-1)?.id||'';saveState();renderDashboardBuilder()}
+function dragMetric(e,id){dragMetricId=id;e.dataTransfer.effectAllowed='copy';e.dataTransfer.setData('text/plain','metric:'+id);e.dataTransfer.setData('application/x-esi-metric',id)}
+function dragDashboardField(e,id){dragFieldId=id;e.dataTransfer.effectAllowed='copy';e.dataTransfer.setData('text/plain','field:'+id);e.dataTransfer.setData('application/x-esi-field',id)}
+let dragStructureOrientation='';
+function dragDashboardStructure(e,orientation){dragStructureOrientation=orientation;e.dataTransfer.effectAllowed='copy';e.dataTransfer.setData('application/x-esi-structure',orientation);e.dataTransfer.setData('text/plain','structure:'+orientation)}
+function dashboardFilterDragOver(e){e.preventDefault();document.getElementById('dashboardFilterZone')?.classList.add('drag-over')}
+function dashboardFilterDragLeave(){document.getElementById('dashboardFilterZone')?.classList.remove('drag-over')}
+function dashboardFilterDrop(e){e.preventDefault();dashboardFilterDragLeave();const raw=e.dataTransfer.getData('application/x-esi-field')||e.dataTransfer.getData('text/plain');const id=(raw||'').replace(/^field:/,'')||dragFieldId;if(id&&fieldById(id))addDashboardFilter(id)}
+function defaultDashboardFilterMode(field){if(field?.dataType==='Date/Time')return'Year';if(field?.dataType==='Number')return'Equals';if(field?.dataType==='Boolean')return'Equals';return'Equals'}
+function addDashboardFilter(fieldId){const db=ensureDashboardShape(dashboardById(state.currentDashboardId));if(!db)return alert('Create or select a dashboard first.');if(db.filters.some(f=>f.fieldId===fieldId))return;const field=fieldById(fieldId);if(!field||field.status!=='Promoted')return;db.filters.push({id:'df_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),fieldId,mode:defaultDashboardFilterMode(field),value:'',value2:''});saveState();renderDashboardFilters();renderDashboardCanvas()}
+function removeDashboardFilter(id){const db=ensureDashboardShape(dashboardById(state.currentDashboardId));if(!db)return;db.filters=db.filters.filter(f=>f.id!==id);saveState();renderDashboardFilters();renderDashboardCanvas();if(document.getElementById('dashboardPreviewOverlay')?.classList.contains('active'))refreshDashboardPreview()}
+function dashboardFilterModes(field){if(field?.dataType==='Date/Time')return['Year','Quarter','Month','Exact Date','Date Range','Before','After'];if(field?.dataType==='Number')return['Equals','Not Equals','Greater Than','Greater Or Equal','Less Than','Less Or Equal','Between'];if(field?.dataType==='Boolean')return['Equals'];return['Equals','Not Equals','In','Not In','Contains','Not Contains','Starts With','Ends With','Is Blank','Is Not Blank']}
+function updateDashboardFilter(id,key,value){const db=ensureDashboardShape(dashboardById(state.currentDashboardId)),f=db?.filters.find(x=>x.id===id);if(!f)return;f[key]=value;if(key==='mode'){f.value='';f.value2=''}saveState();renderDashboardFilters();renderDashboardCanvas();if(document.getElementById('dashboardPreviewOverlay')?.classList.contains('active'))refreshDashboardPreview()}
+async function fieldDistinctValues(field,limit=250){const rows=await getRows(field.sourceId),vals=[];const seen=new Set();for(const r of rows){const v=String(r[field.header]??'').trim();if(!v||seen.has(v))continue;seen.add(v);vals.push(v);if(vals.length>=limit)break}return vals}
+async function filterValueChoices(field,mode){const vals=await fieldDistinctValues(field,500);if(field.dataType==='Date/Time'){const dates=vals.map(v=>new Date(v)).filter(d=>Number.isFinite(d.getTime()));if(mode==='Year')return [...new Set(dates.map(d=>String(d.getFullYear())))].sort();if(mode==='Quarter')return [...new Set(dates.map(d=>`${d.getFullYear()}-Q${Math.floor(d.getMonth()/3)+1}`))].sort();if(mode==='Month')return [...new Set(dates.map(d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`))].sort()}if(field.dataType==='Boolean')return['true','false'];return vals.sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}))}
+function dashboardFilterNeedsSecond(mode){return['Between','Date Range'].includes(mode)}
+function dashboardFilterNoValue(mode){return['Is Blank','Is Not Blank'].includes(mode)}
+async function renderDashboardFilters(targetId='dashboardFilterBar',preview=false){const host=document.getElementById(targetId);if(!host)return;const db=ensureDashboardShape(dashboardById(state.currentDashboardId));if(!db){host.innerHTML='<div class="empty"><b>No dashboard selected.</b>Create or select a dashboard first.</div>';return}if(!db.filters.length){host.innerHTML='<div class="empty" style="padding:16px"><b>No dashboard filters yet.</b>Drag any promoted field here. All promoted fields remain available above.</div>';return}host.innerHTML='<div class="dashboard-filter-bar">'+db.filters.map(f=>{const field=fieldById(f.fieldId);if(!field)return'';const src=sourceById(field.sourceId);return `<div class="dashboard-filter" data-filter-id="${esc(f.id)}"><div class="filter-title"><span>${esc(field.header)}</span>${preview?'':`<button class="btn small danger" onclick="removeDashboardFilter('${esc(f.id)}')">×</button>`}</div><div class="dashboard-filter-controls"><select ${preview?'':'onchange="updateDashboardFilter(\''+esc(f.id)+'\',\'mode\',this.value)"'}>${dashboardFilterModes(field).map(m=>`<option ${m===f.mode?'selected':''}>${esc(m)}</option>`).join('')}</select><span class="filter-value-host" id="filterValue_${esc(targetId)}_${esc(f.id)}"></span></div><div class="dashboard-filter-note">${esc(src?.name||'')} · ${esc(field.dataType)} · ${esc(field.role||'Unknown')}</div></div>`}).join('')+'</div>';
+  for(const f of db.filters){const field=fieldById(f.fieldId);if(!field)continue;const valueHost=document.getElementById(`filterValue_${targetId}_${f.id}`);if(!valueHost)continue;const noValue=dashboardFilterNoValue(f.mode),second=dashboardFilterNeedsSecond(f.mode),choices=await filterValueChoices(field,f.mode);let first='';if(noValue){first='<span class="muted" style="font-size:10px">No value required</span>'}else if(choices.length&&choices.length<=250&&!['Contains','Not Contains','Starts With','Ends With','Between','Date Range','Before','After','Greater Than','Greater Or Equal','Less Than','Less Or Equal'].includes(f.mode)){first=`<select ${preview?'':'onchange="updateDashboardFilter(\''+esc(f.id)+'\',\'value\',this.value)"'}><option value="">All</option>${choices.map(v=>`<option value="${esc(v)}" ${String(v)===String(f.value)?'selected':''}>${esc(v)}</option>`).join('')}</select>`}else{const inputType=(field.dataType==='Date/Time'&&['Exact Date','Date Range','Before','After'].includes(f.mode))?'date':field.dataType==='Number'?'number':'text';first=`<input type="${inputType}" value="${esc(f.value)}" placeholder="${f.mode==='In'||f.mode==='Not In'?'comma-separated values':'Filter value'}" ${preview?'':'onchange="updateDashboardFilter(\''+esc(f.id)+'\',\'value\',this.value)"'}>`}if(second)first+=`<input class="range-second" type="${field.dataType==='Date/Time'?'date':'number'}" value="${esc(f.value2)}" placeholder="Second value" ${preview?'':'onchange="updateDashboardFilter(\''+esc(f.id)+'\',\'value2\',this.value)"'} style="margin-top:6px">`;valueHost.innerHTML=first}
+}
+function dashboardFilterHit(raw,filter,field){if(!filter.value&&!dashboardFilterNoValue(filter.mode))return true;const mode=filter.mode,v=filter.value,v2=filter.value2;if(field.dataType==='Date/Time'){const d=new Date(raw);if(!Number.isFinite(d.getTime()))return false;if(mode==='Year')return String(d.getFullYear())===String(v);if(mode==='Quarter')return `${d.getFullYear()}-Q${Math.floor(d.getMonth()/3)+1}`===String(v);if(mode==='Month')return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`===String(v);if(mode==='Exact Date')return String(raw).slice(0,10)===String(v);if(mode==='Date Range'){const x=d.getTime(),a=Date.parse(v),b=Date.parse(v2);return Number.isFinite(a)&&Number.isFinite(b)&&x>=Math.min(a,b)&&x<=Math.max(a,b)+86399999}if(mode==='Before')return compareValues(raw,'BEFORE',v,'');if(mode==='After')return compareValues(raw,'AFTER',v,'')}
+  const map={'Equals':'=','Not Equals':'!=','Greater Than':'>','Greater Or Equal':'>=','Less Than':'<','Less Or Equal':'<=','Between':'BETWEEN','In':'IN','Not In':'NOT IN','Contains':'CONTAINS','Not Contains':'NOT CONTAINS','Starts With':'STARTS WITH','Ends With':'ENDS WITH','Is Blank':'IS NULL','Is Not Blank':'IS NOT NULL'};return compareValues(raw,map[mode]||'=',v,v2)}
+function directRelationshipForSources(a,b){return state.relationships.find(r=>{const l=fieldById(r.leftFieldId),rr=fieldById(r.rightFieldId);return l&&rr&&((l.sourceId===a&&rr.sourceId===b)||(l.sourceId===b&&rr.sourceId===a))})||null}
+async function applyDashboardFiltersToRows(sourceId,rows,filters){let current=rows;const unapplied=[];for(const f of filters||[]){if(!f.value&&!dashboardFilterNoValue(f.mode))continue;const field=fieldById(f.fieldId);if(!field)continue;if(field.sourceId===sourceId){current=current.filter(r=>dashboardFilterHit(r[field.header],f,field));continue}const rel=directRelationshipForSources(sourceId,field.sourceId);if(!rel){unapplied.push(field.header);continue}const lf=fieldById(rel.leftFieldId),rf=fieldById(rel.rightFieldId),metricJoin=lf.sourceId===sourceId?lf:rf,filterJoin=lf.sourceId===field.sourceId?lf:rf;const remote=await getRows(field.sourceId),keys=new Set(remote.filter(r=>dashboardFilterHit(r[field.header],f,field)).map(r=>String(r[filterJoin.header]??'').trim()).filter(Boolean));current=current.filter(r=>keys.has(String(r[metricJoin.header]??'').trim()))}return{rows:current,unapplied}}
+function dashboardDragOver(e){e.preventDefault();document.getElementById('dashboardCanvas').classList.add('drag-over')}
+function dashboardDragLeave(){document.getElementById('dashboardCanvas').classList.remove('drag-over')}
+function makeSection(orientation){return{id:'section_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),orientation:orientation==='vertical'?'vertical':'horizontal',componentIds:[]}}
+function addDashboardSection(orientation){const db=ensureDashboardShape(dashboardById(state.currentDashboardId));if(!db)return alert('Create or select a dashboard first.');db.sections.push(makeSection(orientation));saveState();renderDashboardCanvas()}
+function removeDashboardSection(id){const db=ensureDashboardShape(dashboardById(state.currentDashboardId));if(!db)return;const sec=db.sections.find(s=>s.id===id);if(!sec)return;if(sec.componentIds.length&&!confirm('Remove this structure and its dashboard components?'))return;const ids=new Set(sec.componentIds);db.components=db.components.filter(c=>!ids.has(c.id));db.sections=db.sections.filter(s=>s.id!==id);saveState();renderDashboardCanvas();if(document.getElementById('dashboardPreviewOverlay')?.classList.contains('active'))refreshDashboardPreview()}
+function dashboardDrop(e){e.preventDefault();dashboardDragLeave();const db=ensureDashboardShape(dashboardById(state.currentDashboardId));if(!db)return alert('Create or select a dashboard first.');const orientation=(e.dataTransfer.getData('application/x-esi-structure')||'').replace(/^structure:/,'')||dragStructureOrientation;if(['horizontal','vertical'].includes(orientation)){db.sections.push(makeSection(orientation));dragStructureOrientation='';saveState();renderDashboardCanvas();return}const metricRaw=e.dataTransfer.getData('application/x-esi-metric')||e.dataTransfer.getData('text/plain')||dragMetricId;const metricId=(metricRaw||'').replace(/^metric:/,'');if(metricById(metricId)){let sec=db.sections.at(-1);if(!sec){sec=makeSection('horizontal');db.sections.push(sec)}const c={id:'comp_'+Date.now().toString(36),metricId,visual:'KPI',span:4,threshold:{enabled:false,direction:'higher',good:'',watch:''},visualMap:{xFieldId:'',yMetricId:metricId,seriesFieldId:''}};db.components.push(c);sec.componentIds.push(c.id);saveState();renderDashboardCanvas()}}
+function dashboardSectionDragOver(e){e.preventDefault();e.stopPropagation();e.currentTarget.classList.add('drag-over')}
+function dashboardSectionDragLeave(e){e.currentTarget.classList.remove('drag-over')}
+function dashboardSectionDrop(e,sectionId){e.preventDefault();e.stopPropagation();e.currentTarget.classList.remove('drag-over');const db=ensureDashboardShape(dashboardById(state.currentDashboardId));if(!db)return;const sec=db.sections.find(s=>s.id===sectionId);if(!sec)return;const orientation=(e.dataTransfer.getData('application/x-esi-structure')||'').replace(/^structure:/,'');if(orientation)return;const componentId=e.dataTransfer.getData('application/x-esi-component')||dragComponentId;if(componentId){db.sections.forEach(s=>s.componentIds=s.componentIds.filter(id=>id!==componentId));sec.componentIds.push(componentId);saveState();renderDashboardCanvas();return}const metricId=(e.dataTransfer.getData('application/x-esi-metric')||e.dataTransfer.getData('text/plain')||'').replace(/^metric:/,'');if(metricId&&metricById(metricId)){const c={id:'comp_'+Date.now().toString(36),metricId,visual:'KPI',span:4,threshold:{enabled:false,direction:'higher',good:'',watch:''},visualMap:{xFieldId:'',yMetricId:metricId,seriesFieldId:''}};db.components.push(c);sec.componentIds.push(c.id);saveState();renderDashboardCanvas()}}
+function dashboardComponentDragStart(e,id){dragComponentId=id;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('application/x-esi-component',id);e.dataTransfer.setData('text/plain','component:'+id)}
+function dashboardComponentDragEnd(e){e.currentTarget.classList.remove('dragging');document.querySelectorAll('.dash-card.drop-before').forEach(x=>x.classList.remove('drop-before'))}
+function dashboardCardDragOver(e){e.preventDefault();e.stopPropagation();e.currentTarget.classList.add('drop-before')}
+function dashboardCardDragLeave(e){e.currentTarget.classList.remove('drop-before')}
+function dashboardCardDrop(e,targetId,sectionId){e.preventDefault();e.stopPropagation();e.currentTarget.classList.remove('drop-before');const db=ensureDashboardShape(dashboardById(state.currentDashboardId));if(!db)return;const sec=db.sections.find(s=>s.id===sectionId);if(!sec)return;const sourceId=e.dataTransfer.getData('application/x-esi-component')||dragComponentId;if(sourceId&&sourceId!==targetId){db.sections.forEach(s=>s.componentIds=s.componentIds.filter(id=>id!==sourceId));const to=sec.componentIds.indexOf(targetId);sec.componentIds.splice(Math.max(0,to),0,sourceId);saveState();renderDashboardCanvas();return}const metricId=(e.dataTransfer.getData('application/x-esi-metric')||'').replace(/^metric:/,'');if(metricId&&metricById(metricId)){const c={id:'comp_'+Date.now().toString(36),metricId,visual:'KPI',span:4,threshold:{enabled:false,direction:'higher',good:'',watch:''},visualMap:{xFieldId:'',yMetricId:metricId,seriesFieldId:''}};db.components.push(c);const to=sec.componentIds.indexOf(targetId);sec.componentIds.splice(Math.max(0,to),0,c.id);saveState();renderDashboardCanvas()}}
+function setComponentSpan(id,span){const db=ensureDashboardShape(dashboardById(state.currentDashboardId)),c=db?.components.find(x=>x.id===id);if(!c)return;c.span=Number(span)||4;saveState();renderDashboardCanvas();if(document.getElementById('dashboardPreviewOverlay')?.classList.contains('active'))refreshDashboardPreview()}
+function beginComponentResize(e,id,sectionId){e.preventDefault();e.stopPropagation();const db=ensureDashboardShape(dashboardById(state.currentDashboardId)),c=db?.components.find(x=>x.id===id),sec=db?.sections.find(x=>x.id===sectionId),card=document.getElementById('card_'+id);if(!db||!c||!sec||!card)return;const grid=card.parentElement,start=card.getBoundingClientRect(),gridRect=grid.getBoundingClientRect(),startX=e.clientX,startY=e.clientY,gap=10;card.classList.add('resizing');card.draggable=false;let nextSpan=Number(c.span)||4,nextHeight=Math.max(140,Number(c.minHeight)||start.height);const move=ev=>{const desiredH=Math.max(140,start.height+(ev.clientY-startY));nextHeight=Math.round(desiredH);card.style.minHeight=nextHeight+'px';if(sec.orientation==='horizontal'){const unit=Math.max(24,(gridRect.width-gap*11)/12),desiredW=Math.max(unit,start.width+(ev.clientX-startX));nextSpan=Math.max(1,Math.min(12,Math.round((desiredW+gap)/(unit+gap))));card.style.gridColumn='span '+nextSpan}};const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);c.span=nextSpan;c.minHeight=nextHeight;card.classList.remove('resizing');card.draggable=true;saveState();renderDashboardCanvas();if(document.getElementById('dashboardPreviewOverlay')?.classList.contains('active'))refreshDashboardPreview()};document.addEventListener('pointermove',move);document.addEventListener('pointerup',up,{once:true})}
+function componentThresholdStatus(c,value){const t=c?.threshold||{};if(!t.enabled||!Number.isFinite(Number(value)))return'neutral';const good=Number(t.good),watch=Number(t.watch);if(!Number.isFinite(good)||!Number.isFinite(watch))return'neutral';const v=Number(value);if(t.direction==='lower'){if(v<=good)return'good';if(v<=watch)return'watch';return'critical'}if(v>=good)return'good';if(v>=watch)return'watch';return'critical'}
+function thresholdSummary(c){const t=c?.threshold||{};if(!t.enabled)return'No dashboard threshold configured.';return `${t.direction==='lower'?'Lower':'Higher'} is better · Good ${t.direction==='lower'?'≤':'≥'} ${t.good||'—'} · Watch threshold ${t.watch||'—'}`}
+function toggleThresholdEditor(id){document.getElementById('threshold_'+id)?.classList.toggle('active')}
+function setComponentThreshold(id,key,value){const db=ensureDashboardShape(dashboardById(state.currentDashboardId)),c=db?.components.find(x=>x.id===id);if(!c)return;if(!c.threshold)c.threshold={enabled:false,direction:'higher',good:'',watch:''};c.threshold[key]=key==='enabled'?Boolean(value):value;saveState();renderDashboardCanvas();if(document.getElementById('dashboardPreviewOverlay')?.classList.contains('active'))refreshDashboardPreview()}
+function toggleIntelligence(id){document.getElementById('card_'+id)?.classList.toggle('intel-open')}
+function activeFilterSummary(db){const parts=[];for(const f of db?.filters||[]){if(!f.value&&!dashboardFilterNoValue(f.mode))continue;const fld=fieldById(f.fieldId);if(fld)parts.push(`${fld.header} ${f.mode}${f.value?' '+f.value:''}${f.value2?' to '+f.value2:''}`)}return parts.length?parts.join(' · '):'No active dashboard filters'}
+function metricSourceName(m){if(m?.sourceId)return sourceById(m.sourceId)?.name||'Unknown source';if(m?.mode==='derived')return'Derived from governed metrics';return'Unknown source'}
+function dashboardVisualRoleDragOver(e){e.preventDefault();e.stopPropagation();e.currentTarget.classList.add('drag-over')}
+function dashboardVisualRoleDragLeave(e){e.stopPropagation();e.currentTarget.classList.remove('drag-over')}
+function dashboardVisualRoleDrop(e,componentId,role){
+  e.preventDefault();e.stopPropagation();e.currentTarget.classList.remove('drag-over');
+  const db=ensureDashboardShape(dashboardById(state.currentDashboardId)),c=db?.components.find(x=>x.id===componentId);if(!c)return;
+  if(!c.visualMap)c.visualMap={xFieldId:'',yMetricId:c.metricId||'',seriesFieldId:''};
+  const metricRaw=(e.dataTransfer.getData('application/x-esi-metric')||'').replace(/^metric:/,'');
+  const fieldRaw=(e.dataTransfer.getData('application/x-esi-field')||'').replace(/^field:/,'');
+  if(role==='yMetricId'){
+    const id=metricRaw||((e.dataTransfer.getData('text/plain')||'').startsWith('metric:')?(e.dataTransfer.getData('text/plain')||'').replace(/^metric:/,''):'');
+    const m=metricById(id);if(!m||m.status!=='Approved')return alert('Y / Value accepts an approved metric.');
+    c.visualMap.yMetricId=id;c.metricId=id;
+  }else{
+    const id=fieldRaw||((e.dataTransfer.getData('text/plain')||'').startsWith('field:')?(e.dataTransfer.getData('text/plain')||'').replace(/^field:/,''):'');
+    const f=fieldById(id);if(!f||f.status!=='Promoted')return alert('This shelf accepts a promoted field.');
+    c.visualMap[role]=id;
+  }
+  saveState();renderDashboardCanvas();if(document.getElementById('dashboardPreviewOverlay')?.classList.contains('active'))refreshDashboardPreview();
+}
+function clearComponentVisualRole(componentId,role){const db=ensureDashboardShape(dashboardById(state.currentDashboardId)),c=db?.components.find(x=>x.id===componentId);if(!c)return;if(!c.visualMap)c.visualMap={xFieldId:'',yMetricId:c.metricId||'',seriesFieldId:''};if(role==='yMetricId'){c.visualMap.yMetricId=c.metricId||''}else c.visualMap[role]='';saveState();renderDashboardCanvas();if(document.getElementById('dashboardPreviewOverlay')?.classList.contains('active'))refreshDashboardPreview()}
+function visualRoleValue(c,role){if(role==='yMetricId'){const m=metricById(c.visualMap?.yMetricId||c.metricId);return m?.name||'Drop approved metric'}const f=fieldById(c.visualMap?.[role]);return f?.header||'Drop promoted field'}
+function visualShelvesHtml(c){return `<div class="visual-shelves"><div class="visual-role-zone" ondragover="dashboardVisualRoleDragOver(event)" ondragleave="dashboardVisualRoleDragLeave(event)" ondrop="dashboardVisualRoleDrop(event,'${esc(c.id)}','xFieldId')"><b>X / Category / Time</b><div class="role-value">${esc(visualRoleValue(c,'xFieldId'))}</div><div class="role-hint">Promoted field</div>${c.visualMap?.xFieldId?`<button class="role-clear" onclick="event.stopPropagation();clearComponentVisualRole('${esc(c.id)}','xFieldId')">×</button>`:''}</div><div class="visual-role-zone" ondragover="dashboardVisualRoleDragOver(event)" ondragleave="dashboardVisualRoleDragLeave(event)" ondrop="dashboardVisualRoleDrop(event,'${esc(c.id)}','yMetricId')"><b>Y / Value</b><div class="role-value">${esc(visualRoleValue(c,'yMetricId'))}</div><div class="role-hint">Approved metric</div></div><div class="visual-role-zone" ondragover="dashboardVisualRoleDragOver(event)" ondragleave="dashboardVisualRoleDragLeave(event)" ondrop="dashboardVisualRoleDrop(event,'${esc(c.id)}','seriesFieldId')"><b>Series / Color</b><div class="role-value">${esc(visualRoleValue(c,'seriesFieldId'))}</div><div class="role-hint">Optional promoted field</div>${c.visualMap?.seriesFieldId?`<button class="role-clear" onclick="event.stopPropagation();clearComponentVisualRole('${esc(c.id)}','seriesFieldId')">×</button>`:''}</div></div><div class="visual-map-note">Build the visualization directly: drag a promoted field to X, an approved metric to Y, and an optional promoted field to Series / Color.</div>`}
+async function visualFieldResolver(metricSourceId,field){
+  if(!field)return{get:()=>'',warning:''};
+  if(field.sourceId===metricSourceId)return{get:r=>String(r[field.header]??'').trim()||'(blank)',warning:''};
+  const rel=directRelationshipForSources(metricSourceId,field.sourceId);if(!rel)return{get:()=>'(unmapped)',warning:`${field.header} is from another source and has no confirmed direct relationship to this metric source.`};
+  const lf=fieldById(rel.leftFieldId),rf=fieldById(rel.rightFieldId),metricJoin=lf.sourceId===metricSourceId?lf:rf,remoteJoin=lf.sourceId===field.sourceId?lf:rf,remote=await getRows(field.sourceId),map=new Map();
+  for(const rr of remote){const k=String(rr[remoteJoin.header]??'').trim();if(!k||map.has(k))continue;map.set(k,String(rr[field.header]??'').trim()||'(blank)')}
+  return{get:r=>map.get(String(r[metricJoin.header]??'').trim())||'(unmatched)',warning:''};
+}
+function calculateMetricRows(metric,rs){
+  let invalidCount=0;
+  if(metric.mode==='derived')return{value:NaN,invalidCount,warning:'Derived metrics cannot yet be re-aggregated by a dropped X/Series field; use the validated metric value or build the grouping into a source metric.'};
+  if(metric.mode==='datediff'){
+    const a=fieldById(metric.dateStartFieldId),b=fieldById(metric.dateEndFieldId),factor={seconds:1000,minutes:60000,hours:3600000,days:86400000}[metric.dateUnit]||3600000,vals=[];
+    rs.forEach(r=>{const x=Date.parse(r[a.header]),y=Date.parse(r[b.header]);if(Number.isFinite(x)&&Number.isFinite(y))vals.push((y-x)/factor);else invalidCount++});
+    if(!vals.length)return{value:NaN,invalidCount};if(metric.dateAgg==='SUM')return{value:vals.reduce((x,y)=>x+y,0),invalidCount};if(metric.dateAgg==='MIN')return{value:Math.min(...vals),invalidCount};if(metric.dateAgg==='MAX')return{value:Math.max(...vals),invalidCount};if(metric.dateAgg==='MEDIAN')return{value:median(vals),invalidCount};return{value:vals.reduce((x,y)=>x+y,0)/vals.length,invalidCount};
+  }
+  const agg=metric.aggregation,field=fieldById(metric.fieldId);if(agg==='COUNT_ROWS')return{value:rs.length,invalidCount};const raw=rs.map(r=>r[field.header]).filter(v=>!isBlank(v));if(agg==='COUNT')return{value:raw.length,invalidCount};if(agg==='COUNT_DISTINCT')return{value:new Set(raw.map(String)).size,invalidCount};const nums=raw.map(v=>Number(String(v).replace(/[$,%]/g,''))).filter(x=>{if(Number.isFinite(x))return true;invalidCount++;return false});if(!nums.length)return{value:NaN,invalidCount};if(agg==='SUM')return{value:nums.reduce((a,b)=>a+b,0),invalidCount};if(agg==='AVG')return{value:nums.reduce((a,b)=>a+b,0)/nums.length,invalidCount};if(agg==='MIN')return{value:Math.min(...nums),invalidCount};if(agg==='MAX')return{value:Math.max(...nums),invalidCount};if(agg==='MEDIAN')return{value:median(nums),invalidCount};if(agg==='PERCENTILE')return{value:percentileValue(nums,metric.percentile),invalidCount};return{value:NaN,invalidCount}
+}
+async function visualDataForComponent(c,db){
+  const metric=metricById(c.visualMap?.yMetricId||c.metricId)||metricById(c.metricId);if(!metric)return{metric:null,result:{value:NaN,series:[],warnings:['Metric not found.'],unappliedFilters:[]},points:[],visualWarnings:[]};
+  let result;try{result=await metricResultForDashboard(metric,db)}catch(err){result={value:NaN,series:null,warnings:[err.message],unappliedFilters:[]}}
+  const xField=fieldById(c.visualMap?.xFieldId),seriesField=fieldById(c.visualMap?.seriesFieldId),visualWarnings=[];
+  if(!xField&&!seriesField)return{metric,result,points:result.series||[],visualWarnings};
+  if(metric.mode==='derived'){visualWarnings.push('Dropped X/Series grouping is not applied to a derived metric.');return{metric,result,points:result.series||[],visualWarnings}}
+  const rows=await getRows(metric.sourceId),dashboardFiltered=await applyDashboardFiltersToRows(metric.sourceId,rows,db?.filters||[]),matched=dashboardFiltered.rows.filter(r=>rowMatches(r,metric.filters||[]));
+  const xr=await visualFieldResolver(metric.sourceId,xField),sr=await visualFieldResolver(metric.sourceId,seriesField);if(xr.warning)visualWarnings.push(xr.warning);if(sr.warning)visualWarnings.push(sr.warning);
+  const groups=new Map();for(const row of matched){const x=xField?xr.get(row):'(all)',ser=seriesField?sr.get(row):'';const key=x+'\u0001'+ser;if(!groups.has(key))groups.set(key,{x,series:ser,rows:[]});groups.get(key).rows.push(row)}
+  const points=[];for(const g of groups.values()){const calc=calculateMetricRows(metric,g.rows);if(calc.warning)visualWarnings.push(calc.warning);points.push({label:g.x,value:calc.value,count:g.rows.length,series:g.series})}
+  if(xField?.dataType==='Date/Time')points.sort((a,b)=>{const da=Date.parse(a.label),dbb=Date.parse(b.label);return Number.isFinite(da)&&Number.isFinite(dbb)?da-dbb:String(a.label).localeCompare(String(b.label),undefined,{numeric:true})});else points.sort((a,b)=>String(a.label).localeCompare(String(b.label),undefined,{numeric:true}));
+  return{metric,result:{...result,unappliedFilters:[...(result.unappliedFilters||[]),...(dashboardFiltered.unapplied||[])]},points,visualWarnings:[...new Set(visualWarnings)]};
+}
+function dataIntelligenceHtml(metric,result,points,c,db,visualWarnings=[]){
+  const finite=(points||[]).filter(p=>Number.isFinite(Number(p.value))),obs=[],evidence=[];
+  const total=Number(result.totalRows||0),matched=Number(result.matchedRows||0),coverage=total?matched/total*100:NaN;
+  evidence.push(`Current calculated value: ${Number.isFinite(Number(result.value))?fmt(result.value,4):'—'}`);
+  if(total)evidence.push(`Rows in source population: ${fmt(total)}`);if(Number.isFinite(matched))evidence.push(`Rows used after filters: ${fmt(matched)}${Number.isFinite(coverage)?` (${coverage.toFixed(1)}%)`:''}`);
+  if(finite.length){const sorted=[...finite].sort((a,b)=>Number(b.value)-Number(a.value)),top=sorted[0],low=sorted.at(-1),avg=finite.reduce((a,b)=>a+Number(b.value),0)/finite.length;evidence.push(`Plotted groups: ${fmt(finite.length)}`);obs.push(`Highest plotted value is ${top.label}${top.series?` / ${top.series}`:''} at ${fmt(top.value,4)}; lowest is ${low.label}${low.series?` / ${low.series}`:''} at ${fmt(low.value,4)}.`);obs.push(`Average across plotted groups is ${fmt(avg,4)}.`);const positives=finite.map(x=>Math.max(0,Number(x.value))),sum=positives.reduce((a,b)=>a+b,0);if(sum>0)obs.push(`The largest plotted group represents ${(Math.max(...positives)/sum*100).toFixed(1)}% of the positive plotted total.`);const uniqueSeries=[...new Set(finite.map(x=>x.series).filter(Boolean))];if(uniqueSeries.length>1)obs.push(`The visualization contains ${uniqueSeries.length} series: ${uniqueSeries.slice(0,6).join(', ')}${uniqueSeries.length>6?'…':''}.`);const xField=fieldById(c.visualMap?.xFieldId);if(xField?.dataType==='Date/Time'&&finite.length>1){const chron=[...finite].sort((a,b)=>Date.parse(a.label)-Date.parse(b.label)).filter(x=>Number.isFinite(Date.parse(x.label)));if(chron.length>1){const first=Number(chron[0].value),last=Number(chron.at(-1).value);if(Number.isFinite(first)&&Number.isFinite(last)){const delta=last-first,pctChange=first!==0?delta/Math.abs(first)*100:NaN;obs.push(`From ${chron[0].label} to ${chron.at(-1).label}, the plotted value changed by ${fmt(delta,4)}${Number.isFinite(pctChange)?` (${pctChange.toFixed(1)}%)`:''}.`)}}}}
+  const status=componentThresholdStatus(c,result.value),statusLabel=status==='neutral'?'No threshold classification':status[0].toUpperCase()+status.slice(1);if(status!=='neutral')obs.push(`The current calculated value is classified ${statusLabel} by this card's configured threshold.`);
+  if(!obs.length)obs.push('There is not enough grouped data yet for a comparative pattern; add an X field or Series field to expose distribution or trend evidence.');
+  const quality=[...(result.warnings||[]),...(visualWarnings||[])];if(result.invalidCount)quality.push(`${fmt(result.invalidCount)} value(s) could not be used by the calculation.`);if(result.unappliedFilters?.length)quality.push(`Unapplied dashboard filter(s): ${result.unappliedFilters.join(', ')}.`);
+  const filters=activeFilterSummary(db);
+  return `<div class="intel-summary"><h5>Intelligent Data Summary</h5><div class="intel-evidence"><b>Measured evidence:</b> ${esc(evidence.join(' · '))}</div><ul class="intel-observations">${obs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><div class="intel-data-note"><b>Filter context:</b> ${esc(filters)}${quality.length?`<br><b>Data quality / coverage:</b> ${esc([...new Set(quality)].join(' · '))}`:''}</div></div>`;
+}
+
+function nativeChartHtml(series,kind){const rows=(series||[]).filter(x=>Number.isFinite(Number(x.value))).slice(0,80);if(!rows.length)return'<div class="chart-status">Drop a promoted field into X / Category / Time (or use a grouped metric) to create a plotted series.</div>';const display=rows.map(x=>({...x,displayLabel:x.series?`${x.label} · ${x.series}`:x.label})),vals=display.map(x=>Number(x.value)),min=Math.min(...vals),max=Math.max(...vals),range=max-min||1;if(kind==='Bar'){const m=Math.max(...vals.map(Math.abs),1);return '<div class="dash-series">'+display.slice(0,20).map(x=>`<div class="bar-row"><span>${esc(x.displayLabel)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(0,Math.abs(Number(x.value))/m*100)}%"></div></div><b>${fmt(x.value,2)}</b></div>`).join('')+'</div>'}if(kind==='Pie'){const total=vals.reduce((a,b)=>a+Math.max(0,b),0)||1;let a=0;const stops=[];display.slice(0,10).forEach((x,i)=>{const pct=Math.max(0,Number(x.value))/total*100,b=a+pct;stops.push(`#${['64748b','0b3d91','475569','94a3b8','1e40af','334155','60a5fa','64748b','93c5fd','1d4ed8'][i%10]} ${a}% ${b}%`);a=b});return `<div class="pie-fallback" style="background:conic-gradient(${stops.join(',')})"></div><div class="chart-legend">${display.slice(0,10).map(x=>`<div><span class="chart-dot"></span>${esc(x.displayLabel)} · ${fmt(x.value,2)}</div>`).join('')}</div>`}const w=760,h=220,p=26;const pts=display.map((x,i)=>{const rawX=Number(x.label),xx=kind==='Scatter'&&Number.isFinite(rawX)?p+(rawX-Math.min(...display.map(z=>Number(z.label)).filter(Number.isFinite)))/(Math.max(...display.map(z=>Number(z.label)).filter(Number.isFinite))-Math.min(...display.map(z=>Number(z.label)).filter(Number.isFinite))||1)*(w-2*p):(display.length===1?w/2:p+i*((w-2*p)/(display.length-1))),yy=h-p-((Number(x.value)-min)/range)*(h-2*p);return{x:xx,y:yy,label:x.displayLabel,value:Number(x.value)}});if(kind==='Scatter')return `<svg class="native-chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" stroke="#cbd5e1"/><line x1="${p}" y1="${p}" x2="${p}" y2="${h-p}" stroke="#cbd5e1"/>${pts.map(q=>`<circle cx="${q.x}" cy="${q.y}" r="5" fill="#0b3d91"><title>${esc(q.label)}: ${fmt(q.value,3)}</title></circle>`).join('')}</svg>`;return `<svg class="native-chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" stroke="#cbd5e1"/><line x1="${p}" y1="${p}" x2="${p}" y2="${h-p}" stroke="#cbd5e1"/><polyline fill="none" stroke="#0b3d91" stroke-width="3" points="${pts.map(q=>`${q.x},${q.y}`).join(' ')}"/>${pts.map(q=>`<circle cx="${q.x}" cy="${q.y}" r="4" fill="#0b3d91"><title>${esc(q.label)}: ${fmt(q.value,3)}</title></circle>`).join('')}</svg>`}
+let pythonAnalyticsPromise=null;
+async function ensurePyodideScript(){throw new Error('Offline build: external runtime loading is disabled.')}
+async function ensurePythonAnalytics(){throw new Error('Offline build: Pyodide/NumPy/Pandas/Matplotlib assets are not bundled; native browser rendering is active.')}
+async function pythonChartImage(metric,series,kind){const py=await ensurePythonAnalytics(),payload=JSON.stringify({title:metric.name,rows:(series||[]).map(x=>({label:String(x.label),value:Number(x.value),count:Number(x.count||0),series:String(x.series||'')})),kind:kind.toLowerCase()});py.globals.set('esi_payload_json',payload);const code=`
+import json, io, base64
+import numpy as np
+import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+payload=json.loads(esi_payload_json)
+df=pd.DataFrame(payload['rows'])
+fig, ax=plt.subplots(figsize=(8.2,4.2))
+kind=payload['kind']
+if len(df):
+    df['label']=df['label'].astype(str)
+    df['series']=df['series'].fillna('').astype(str)
+    df['value']=pd.to_numeric(df['value'], errors='coerce')
+    df=df.dropna(subset=['value'])
+if kind=='pie':
+    if len(df):
+        labels=(df['label'] + np.where(df['series'].eq(''), '', ' · ' + df['series'])).tolist()
+        safe=np.clip(df['value'].to_numpy(dtype=float),0,None)
+        if safe.sum()>0: ax.pie(safe, labels=labels, autopct=lambda p: f'{p:.1f}%' if p>=4 else '')
+        else: ax.text(.5,.5,'No positive values for pie chart',ha='center',va='center')
+    else: ax.text(.5,.5,'No plotted data',ha='center',va='center')
+elif kind=='scatter':
+    if len(df):
+        x=pd.to_numeric(df['label'], errors='coerce')
+        if x.isna().all(): x=pd.Series(np.arange(len(df)),index=df.index,dtype=float)
+        else: x=x.fillna(pd.Series(np.arange(len(df)),index=df.index))
+        groups=df.groupby('series',dropna=False) if df['series'].ne('').any() else [('',df)]
+        for name,g in groups:
+            gx=x.loc[g.index].to_numpy(dtype=float); gy=g['value'].to_numpy(dtype=float)
+            ax.scatter(gx,gy,label=name if name else None)
+        if df['series'].ne('').any(): ax.legend(fontsize=8)
+elif len(df) and df['series'].ne('').any():
+    piv=df.pivot_table(index='label',columns='series',values='value',aggfunc='sum')
+    if kind=='line': piv.plot(ax=ax,marker='o',linewidth=2)
+    else: piv.plot(kind='bar',ax=ax)
+elif len(df):
+    labels=df['label'].tolist(); values=df['value'].to_numpy(dtype=float)
+    if kind=='line': ax.plot(labels,values,marker='o',linewidth=2)
+    else: ax.bar(labels,values)
+else: ax.text(.5,.5,'No plotted data',ha='center',va='center')
+ax.set_title(payload['title'])
+if kind!='pie':
+    ax.set_ylabel('Value'); ax.grid(axis='y',alpha=.2)
+    if kind in ('bar','line'): ax.tick_params(axis='x',rotation=45)
+fig.tight_layout()
+buf=io.BytesIO(); fig.savefig(buf,format='png',dpi=130,bbox_inches='tight'); plt.close(fig)
+base64.b64encode(buf.getvalue()).decode('ascii')
+`;return await py.runPythonAsync(code)}
+async function renderPythonChartInto(hostId,metric,series,kind){const host=document.getElementById(hostId);if(!host)return;host.innerHTML=nativeChartHtml(series,kind)+`<div class="python-note">Offline device-only rendering. No external runtime or network request is used.</div>`}
+async function metricResultForDashboard(metric,db){if(metric.mode==='derived'){const result=await evaluateMetric(metric,[],db?.filters||[]);return result}return await evaluateMetric(metric,[],db?.filters||[])}
+async function renderDashboardCard(c,db,preview,sectionId){
+  const visualData=await visualDataForComponent(c,db),m=visualData.metric;if(!m)return null;
+  const result=visualData.result,series=visualData.points||[],visual=c.visual||'KPI',span=Number(c.span)||4,status=componentThresholdStatus(c,result.value),chartHost='chart_'+(preview?'preview_':'builder_')+c.id;
+  let body='';
+  if(visual==='KPI')body=`<div class="dash-value">${Number.isFinite(result.value)?fmt(result.value,4):'—'}</div>`;
+  else if(visual==='Table'){body=series.length?'<div class="table-wrap" style="max-height:260px;margin-top:8px"><table class="table"><thead><tr><th>X / Category</th><th>Series</th><th>Value</th><th>Rows</th></tr></thead><tbody>'+series.slice(0,150).map(x=>`<tr><td>${esc(x.label)}</td><td>${esc(x.series||'')}</td><td>${Number.isFinite(x.value)?fmt(x.value,4):'—'}</td><td>${fmt(x.count)}</td></tr>`).join('')+'</tbody></table></div>':`<div class="table-wrap" style="margin-top:8px"><table class="table"><tbody><tr><td>${esc(m.name)}</td><td>${Number.isFinite(result.value)?fmt(result.value,4):'—'}</td></tr></tbody></table></div>`}
+  else body=`<div id="${esc(chartHost)}" class="chart-status">Preparing ${esc(visual)} chart…</div>`;
+  const unapplied=result.unappliedFilters?.length?`<div class="python-note">Filter not applied to this metric (no direct confirmed relationship): ${esc([...new Set(result.unappliedFilters)].join(', '))}</div>`:'';
+  const visualWarn=visualData.visualWarnings?.length?`<div class="python-note">Visualization mapping: ${esc(visualData.visualWarnings.join(' · '))}</div>`:'';
+  const thresholdControls=preview?'':`<div id="threshold_${esc(c.id)}" class="threshold-editor"><div class="field"><label>Thresholds</label><select onchange="setComponentThreshold('${esc(c.id)}','enabled',this.value==='on')"><option value="off" ${c.threshold?.enabled?'':'selected'}>Off</option><option value="on" ${c.threshold?.enabled?'selected':''}>On</option></select></div><div class="field"><label>Direction</label><select onchange="setComponentThreshold('${esc(c.id)}','direction',this.value)"><option value="higher" ${(c.threshold?.direction||'higher')==='higher'?'selected':''}>Higher is better</option><option value="lower" ${c.threshold?.direction==='lower'?'selected':''}>Lower is better</option></select></div><div class="field"><label>Good threshold</label><input type="number" step="any" value="${esc(c.threshold?.good??'')}" onchange="setComponentThreshold('${esc(c.id)}','good',this.value)"></div><div class="field"><label>Watch threshold</label><input type="number" step="any" value="${esc(c.threshold?.watch??'')}" onchange="setComponentThreshold('${esc(c.id)}','watch',this.value)"></div><div class="threshold-legend" style="grid-column:1/-1"><span class="g">Good</span><span class="w">Watch</span><span class="c">Critical</span></div></div>`;
+  const controls=preview?'':`${visualShelvesHtml(c)}<div class="component-actions"><select onchange="setComponentVisual('${esc(c.id)}',this.value)">${['KPI','Table','Bar','Line','Pie','Scatter'].map(v=>`<option ${v===visual?'selected':''}>${v}</option>`).join('')}</select><select onchange="setComponentSpan('${esc(c.id)}',this.value)">${[[3,'¼ width'],[4,'⅓ width'],[6,'½ width'],[8,'⅔ width'],[12,'Full width']].map(([v,l])=>`<option value="${v}" ${v===span?'selected':''}>${l}</option>`).join('')}</select><button class="btn small" onclick="toggleThresholdEditor('${esc(c.id)}')">Thresholds</button><button class="btn small intel-btn" onclick="toggleIntelligence('${esc(c.id)}')" title="Pin intelligent data summary">ⓘ</button><button class="btn small danger" onclick="removeComponent('${esc(c.id)}')">Remove</button></div>`;
+  const statusLabel=status==='neutral'?'Pending Threshold':status[0].toUpperCase()+status.slice(1),intelligence=dataIntelligenceHtml(m,result,series,c,db,visualData.visualWarnings||[]);
+  const div=document.createElement('div');div.id='card_'+c.id;div.className=`dash-card status-${status}`;div.style.gridColumn=`span ${span}`;if(Number(c.minHeight)>0)div.style.minHeight=Math.max(140,Number(c.minHeight))+'px';div.tabIndex=0;
+  if(!preview){div.draggable=true;div.ondragstart=e=>dashboardComponentDragStart(e,c.id);div.ondragend=dashboardComponentDragEnd;div.ondragover=dashboardCardDragOver;div.ondragleave=dashboardCardDragLeave;div.ondrop=e=>dashboardCardDrop(e,c.id,sectionId)}
+  div.innerHTML=`<div class="actions" style="justify-content:space-between"><h4>${esc(m.name)}</h4><div class="dash-card-status"><span class="status-dot"></span>${esc(statusLabel)}</div></div>${body}${unapplied}${visualWarn}${preview?'<div class="preview-intel-note">Hover or focus for intelligent data summary.</div>':''}${controls}${thresholdControls}${intelligence}${preview?'':`<div class="component-resize-handle" title="Drag to resize width and height" onpointerdown="beginComponentResize(event,'${esc(c.id)}','${esc(sectionId)}')"></div>`}`;
+  if(['Bar','Line','Pie','Scatter'].includes(visual))setTimeout(()=>renderPythonChartInto(chartHost,m,series,visual),0);return div
+}
+async function renderDashboardSections(host,db,preview=false){host.innerHTML='';if(!db.sections.length){host.innerHTML='<div class="empty"><b>Drop a Horizontal Row or Vertical Stack here.</b>Then drop approved metrics into that structure.</div>';return}const wrap=document.createElement('div');wrap.className='dashboard-layout';host.appendChild(wrap);for(const sec of db.sections){const block=document.createElement('section');block.className='dash-section';if(!preview){block.ondragover=dashboardSectionDragOver;block.ondragleave=dashboardSectionDragLeave;block.ondrop=e=>dashboardSectionDrop(e,sec.id)}const title=sec.orientation==='vertical'?'Vertical Stack':'Horizontal Row';block.innerHTML=`<div class="dash-section-head"><div class="dash-section-title">${esc(title)}</div>${preview?'':`<button class="btn small danger" onclick="removeDashboardSection('${esc(sec.id)}')">Remove Structure</button>`}</div><div class="dash-section-grid ${esc(sec.orientation)}" id="sectionGrid_${preview?'p_':''}${esc(sec.id)}"></div>`;wrap.appendChild(block);const grid=block.querySelector('.dash-section-grid');const comps=sec.componentIds.map(id=>db.components.find(c=>c.id===id)).filter(Boolean);if(!comps.length){grid.innerHTML='<div class="dash-section-empty">Drop approved metrics here.</div>';continue}for(const c of comps){const card=await renderDashboardCard(c,db,preview,sec.id);if(card)grid.appendChild(card)}}}
+async function renderDashboardCanvas(){const host=document.getElementById('dashboardCanvas'),db=ensureDashboardShape(dashboardById(state.currentDashboardId));if(!db){host.innerHTML='<div class="empty"><b>No working dashboard selected.</b>Create a blank dashboard above. Nothing is prebuilt.</div>';return}host.innerHTML=`<div class="dashboard-builder-toolbar"><div><h3 style="margin:0">${esc(db.name)}</h3><div class="builder-help">Drop Horizontal Row / Vertical Stack structures into the canvas, then drop metrics into them. Drag fields/metrics into each visualization's X, Y and Series shelves. Hover or focus a card for an intelligent summary of the plotted data.</div></div><div class="actions"><button class="btn small" onclick="addDashboardSection('horizontal')">+ Horizontal</button><button class="btn small" onclick="addDashboardSection('vertical')">+ Vertical</button><span class="badge blue">Working Dashboard</span></div></div><div id="dashboardLayoutHost"></div>`;await renderDashboardSections(document.getElementById('dashboardLayoutHost'),db,false)}
+function setComponentVisual(id,visual){const db=ensureDashboardShape(dashboardById(state.currentDashboardId)),c=db?.components.find(x=>x.id===id);if(!c)return;c.visual=visual;saveState();renderDashboardCanvas();if(document.getElementById('dashboardPreviewOverlay')?.classList.contains('active'))refreshDashboardPreview()}
+function removeComponent(id){const db=ensureDashboardShape(dashboardById(state.currentDashboardId));if(!db)return;db.components=db.components.filter(c=>c.id!==id);db.sections.forEach(s=>s.componentIds=s.componentIds.filter(x=>x!==id));saveState();renderDashboardCanvas();if(document.getElementById('dashboardPreviewOverlay')?.classList.contains('active'))refreshDashboardPreview()}
+async function viewDashboard(){const db=ensureDashboardShape(dashboardById(state.currentDashboardId));if(!db)return alert('Create or select a dashboard first.');const overlay=document.getElementById('dashboardPreviewOverlay');overlay.classList.add('active');overlay.setAttribute('aria-hidden','false');document.getElementById('dashboardPreviewTitle').textContent=db.name;await refreshDashboardPreview()}
+function closeDashboardView(){const overlay=document.getElementById('dashboardPreviewOverlay');overlay.classList.remove('active');overlay.setAttribute('aria-hidden','true')}
+async function refreshDashboardPreview(){const db=ensureDashboardShape(dashboardById(state.currentDashboardId));if(!db)return closeDashboardView();document.getElementById('dashboardPreviewTitle').textContent=db.name;await renderDashboardFilters('dashboardPreviewFilters',false);await renderDashboardSections(document.getElementById('dashboardPreviewGrid'),db,true)}
+
+function reconcileStateReferences(){const sourceIds=new Set(state.sources.map(s=>s.id));for(const [id,f] of Object.entries(state.fields))if(!sourceIds.has(f.sourceId))delete state.fields[id];const fieldIds=new Set(Object.keys(state.fields));state.relationships=(state.relationships||[]).filter(r=>fieldIds.has(r.leftFieldId)&&fieldIds.has(r.rightFieldId));state.concepts=(state.concepts||[]).map(c=>({...c,fieldIds:(c.fieldIds||[]).filter(id=>fieldIds.has(id))}));let metrics=(state.metrics||[]).filter(m=>m.mode==='derived'||sourceIds.has(m.sourceId));let changed=true;while(changed){changed=false;const mids=new Set(metrics.map(m=>m.id));const next=metrics.filter(m=>m.mode!=='derived'||(mids.has(m.derivedLeftMetricId)&&mids.has(m.derivedRightMetricId)));if(next.length!==metrics.length){metrics=next;changed=true}}state.metrics=metrics;const mids=new Set(state.metrics.map(m=>m.id));for(const d of state.dashboards||[]){ensureDashboardShape(d);d.filters=(d.filters||[]).filter(f=>fieldIds.has(f.fieldId));d.components=(d.components||[]).filter(c=>mids.has(c.metricId)&&(!c.visualMap?.yMetricId||mids.has(c.visualMap.yMetricId)));d.components.forEach(c=>{if(c.visualMap&&!fieldIds.has(c.visualMap.xFieldId))c.visualMap.xFieldId='';if(c.visualMap&&!fieldIds.has(c.visualMap.seriesFieldId))c.visualMap.seriesFieldId=''});const valid=new Set(d.components.map(c=>c.id));(d.sections||[]).forEach(sec=>sec.componentIds=(sec.componentIds||[]).filter(id=>valid.has(id)))}if(state.currentSourceId&&!sourceIds.has(state.currentSourceId))state.currentSourceId=state.sources.at(-1)?.id||'';if(state.currentDashboardId&&!state.dashboards.some(d=>d.id===state.currentDashboardId))state.currentDashboardId=state.dashboards.at(-1)?.id||'';saveState()}
+async function resetEverything(){if(!confirm('Delete all uploaded source registrations, staged fields, relationships, concepts, metrics, validation results, and working dashboards from this lab?'))return;state=freshState();saveState();rowCache.clear();await dbClear();document.getElementById('uploadStatus').className='notice';document.getElementById('uploadStatus').textContent='No source uploaded yet.';showStep(0)}
+
+reconcileStateReferences();
+renderSourceInventory();
+</script>
+</body>
+</html>
